@@ -331,7 +331,10 @@ export function cleanOcrText(text) {
     .filter((l) => {
       if (!l) return true;
       const letters = (l.match(/[\p{L}\p{N}]/gu) || []).length;
-      return letters >= 2 && letters / l.replace(/\s/g, "").length >= 0.5;
+      if (letters < 2 || letters / l.replace(/\s/g, "").length < 0.5) return false;
+      // lines of mostly 1–2 letter "words" are usually dashes, borders or smudges read as letters
+      const words = l.split(" ");
+      return words.length < 4 || letters / words.length >= 2.6;
     })
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
