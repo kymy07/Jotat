@@ -674,7 +674,167 @@ img { max-width: 100%; display: block; }
   .editor__bar .pill { padding: 0 13px; }
 }
 
+/* ==========================================================
+   MOTION — paper depth, tactile controls and short entrances
+   ========================================================== */
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.2, .8, .25, 1.15);
+}
+
+.pill, .icon-btn, .tabs button, .note-item, .shutter {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.press-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
+  opacity: 0;
+  animation: press-ripple .55s var(--ease-out);
+}
+@keyframes press-ripple {
+  from { transform: scale(0); opacity: .2; }
+  to { transform: scale(1); opacity: 0; }
+}
+
+.motion-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 9px;
+}
+.motion-toggle[hidden] { display: none; }
+.hero__visual .float-chip--bottom { bottom: 19%; }
+
+/* The segmented indicator follows the actual selected tab. Older browsers
+   keep the original selected-button treatment. */
+@supports selector(:has(*)) {
+  .tabs { position: relative; isolation: isolate; }
+  .tabs::before {
+    content: "";
+    position: absolute;
+    top: 4px; bottom: 4px; left: 4px;
+    width: calc((100% - 12px) / 2);
+    border-radius: inherit;
+    background: rgba(255,255,255,.95);
+    box-shadow: var(--shadow-sm);
+    transition: transform .35s var(--ease-spring);
+    pointer-events: none;
+  }
+  .tabs:has(button:nth-child(2)[aria-selected="true"])::before {
+    transform: translateX(calc(100% + 4px));
+  }
+  .tabs button { z-index: 1; }
+  .tabs button[aria-selected="true"] { background: transparent; box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero > .chip { animation: rise-in .65s var(--ease-out) both; }
+  .hero__title > span { animation: title-in .85s var(--ease-out) both; }
+  .hero__title > span:nth-child(2) { animation-delay: .1s; }
+  .hero__side { animation: rise-in .8s .2s var(--ease-out) both; }
+  .auth__big { animation: rise-in .75s var(--ease-out) both; }
+  .auth__card { animation: rise-in .8s .1s var(--ease-out) backwards; }
+  .auth__card form:not(.hidden) { animation: rise-in .3s var(--ease-out); }
+  .motion-reveal.is-revealed {
+    animation: rise-in .65s var(--reveal-delay, 0ms) var(--ease-out) backwards;
+  }
+
+  .hero__visual {
+    transform: perspective(1100px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform .65s var(--ease-out);
+  }
+  .hero__visual .paper--a { animation: paper-drift-a 7s ease-in-out infinite; }
+  .hero__visual .paper--b { animation: paper-drift-b 8s ease-in-out infinite; }
+  /* A full-height transparent layer lets the scan line move with transform. */
+  .hero__visual .viewfinder::after {
+    height: 100%;
+    background: linear-gradient(#fbfbf6, #fbfbf6) top / 100% 2px no-repeat;
+    box-shadow: none;
+    animation: scan-sweep 3.2s ease-in-out infinite alternate;
+  }
+  .hero__visual.is-offscreen *, .hero__visual.is-offscreen *::after,
+  .hero__visual.is-page-hidden *, .hero__visual.is-page-hidden *::after {
+    animation-play-state: paused;
+  }
+
+  .pill, .icon-btn {
+    transition: transform .24s var(--ease-spring), background .2s ease, box-shadow .24s ease;
+  }
+  .pill:active { transform: translateY(1px) scale(.95); }
+  .icon-btn:active { transform: translateY(1px) scale(.9); }
+  .pill > svg, .step__icon, .feature__no {
+    transition: transform .35s var(--ease-spring);
+  }
+  .step, .feature {
+    transition: transform .4s var(--ease-out), box-shadow .4s ease;
+  }
+  .feature__no { display: inline-block; }
+  .note-item { transition: transform .2s var(--ease-out), background .2s, box-shadow .2s; }
+  .note-item:active { transform: scale(.98); }
+  .tabs button:active { transform: scale(.96); }
+  .modal.show { animation: fade-in .2s ease-out; }
+  .modal.show .modal__bottom { animation: rise-in .35s var(--ease-out); }
+  .msg.show, .attachment.show { animation: rise-in .3s var(--ease-out); }
+  .toast { transition: opacity .25s ease, transform .35s var(--ease-spring); }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pill:hover { transform: translateY(-3px); }
+    .pill:active { transform: translateY(1px) scale(.95); }
+    .icon-btn:hover { transform: translateY(-2px); }
+    .icon-btn:active { transform: translateY(1px) scale(.9); }
+    .hero__ctas .pill:hover > svg { transform: translateX(3px); }
+    .step:hover, .feature:hover {
+      transform: perspective(900px) translateY(-7px) rotateX(2deg);
+      box-shadow: var(--highlight), var(--shadow-lg);
+    }
+    .step:hover .step__icon { transform: translateY(-3px) rotate(-5deg); }
+    .feature:hover .feature__no { transform: translateX(4px); }
+    .note-item:hover { transform: translateX(2px); }
+  }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; translate: 0 18px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes title-in {
+  from { opacity: 0; translate: 0 28px; transform: rotateX(-12deg); }
+  to { opacity: 1; translate: 0 0; transform: rotateX(0); }
+}
+@keyframes paper-drift-a {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-9px) rotate(-4deg); }
+}
+@keyframes paper-drift-b {
+  0%, 100% { transform: translateY(0) rotate(5deg); }
+  50% { transform: translateY(7px) rotate(7deg); }
+}
+@keyframes scan-sweep {
+  from { transform: translateY(4%); }
+  to { transform: translateY(96%); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* User pause and OS preference also stop existing scan/bob animations. */
+html[data-motion-paused] *, html[data-motion-paused] *::before, html[data-motion-paused] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+html[data-motion-paused] { scroll-behavior: auto; }
+html[data-motion-paused] .hero__visual,
+html[data-motion-paused] :is(.pill, .icon-btn, .step, .feature, .note-item, .step__icon, .feature__no, .hero__ctas .pill > svg) {
+  transform: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
+  .hero__visual, .pill:hover, .pill:active, .icon-btn:hover, .icon-btn:active { transform: none; }
 }

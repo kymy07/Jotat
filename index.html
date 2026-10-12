@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&family=Caveat:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/version.js"></script>
+  <script src="js/motion.js" defer></script>
 </head>
 <body>
 
@@ -37,28 +38,29 @@
       </h1>
 
       <div class="hero__grid">
-        <div class="hero__visual" aria-hidden="true">
-          <div class="paper paper--a">
+        <div class="hero__visual">
+          <div class="paper paper--a" aria-hidden="true">
             Meeting — Tues<br>
             · budget Q4 ✓<br>
             · call vendor<br>
             · <strike>print slides</strike><br>
             ideas → app!!
           </div>
-          <div class="paper paper--b">
+          <div class="paper paper--b" aria-hidden="true">
             beli susu<br>
             roti, telur<br>
             bayar bil ☐
           </div>
-          <div class="viewfinder"><i></i><i></i><i></i><i></i></div>
-          <div class="float-chip float-chip--top">
+          <div class="viewfinder" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="float-chip float-chip--top" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 10h8M8 14h5"/></svg>
             Text found · 18 words
           </div>
-          <div class="float-chip float-chip--bottom">
+          <div class="float-chip float-chip--bottom" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
             Saved to your notes
           </div>
+          <button class="pill pill--glass motion-toggle" type="button" aria-pressed="false" hidden>Pause motion</button>
         </div>
 
         <div class="hero__side">
