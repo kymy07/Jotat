@@ -1,4 +1,4 @@
-# Jotara — Notes, Snaps & OCR
+# Jotat — Notes, Snaps & OCR
 
 A zero-build, mobile-friendly **note-taking web app**. Jot notes, snap a photo
 with the camera, and let **OCR** read the printed text into an editable note —
@@ -7,9 +7,9 @@ in **English and Bahasa Melayu**. Accounts and notes live in **Firebase**
 with a vintage-editorial palette
 (`#151515` ink · `#D9D9CF` canvas · `#E7E7DF` paper).
 
-Live demo: https://kymy07.github.io/Jotara/
+Live demo: https://kymy07.github.io/Jotat/
 
-Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.1.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface**: oversized condensed
 headlines, a single ink colour for all text, black pill buttons, film grain, and
@@ -34,7 +34,7 @@ our own and no API besides Firebase.
 ## Folder structure
 
 ```
-Jotara/
+Jotat/
 ├── index.html               # landing page (hero, features, call to action)
 ├── auth.html                # log in / sign up (tabs, ?mode=signup opens sign-up)
 ├── app.html                 # the notes app (list, editor, camera modal)
@@ -80,7 +80,7 @@ Then open http://localhost:8000/
 ### Firebase setup
 
 The app talks to the Firebase project **`snippit-f17e8`** (named before the
-rename to Jotara; Firebase project IDs cannot change)
+rename to Jotat; Firebase project IDs cannot change)
 (Realtime Database in `asia-southeast1`). One-time setup in the
 [Firebase Console](https://console.firebase.google.com/project/snippit-f17e8):
 
@@ -160,7 +160,7 @@ noise layer adds the film grain.
 
 ### GitHub Pages (current)
 
-The site runs at **https://kymy07.github.io/Jotara/**, served as static files
+The site runs at **https://kymy07.github.io/Jotat/**, served as static files
 by GitHub Pages — no build step, no container.
 
 Deploys are **driven by version tags**. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)

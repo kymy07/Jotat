@@ -1,6 +1,13 @@
 # Changelog
 
-All notable changes to Jotara. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+
+## [1.1.1] — 2026-10-13
+
+### Changed
+- Renamed the app from **Jotara** to **Jotat** — logo, page titles, copy, README and workflow.
+- GitHub repository renamed to `kymy07/Jotat`; the site now lives at https://kymy07.github.io/Jotat/.
+- Version global renamed `JOTARA_VERSION` → `JOTAT_VERSION`.
 
 ## [1.1.0] — 2026-10-13
 

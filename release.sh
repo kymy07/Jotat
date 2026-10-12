@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cut a new Jotara release: bump the version everywhere, commit, tag and push.
+# Cut a new Jotat release: bump the version everywhere, commit, tag and push.
 # Pushing the tag triggers .github/workflows/deploy.yml (deploy + GitHub Release).
 #
 #   ./release.sh 1.0.1          # bug fix
@@ -22,13 +22,13 @@ if ! grep -q "^## \[$NEW\]" CHANGELOG.md; then
 fi
 
 echo "$NEW" > VERSION
-sed -i -E "s/(JOTARA_VERSION = \")[^\"]*(\")/\1$NEW\2/" js/version.js
+sed -i -E "s/(JOTAT_VERSION = \")[^\"]*(\")/\1$NEW\2/" js/version.js
 sed -i -E "s/(data-version>v)[0-9]+\.[0-9]+\.[0-9]+/\1$NEW/" index.html auth.html app.html
 sed -i -E "s/(Current version: \*\*)[^*]*(\*\*)/\1$NEW\2/" README.md
 
 git add -A
 git commit -m "Release $NEW"
-git tag -a "v$NEW" -m "Jotara $NEW"
+git tag -a "v$NEW" -m "Jotat $NEW"
 git push origin main
 git push origin "v$NEW"
 echo "Pushed v$NEW — watch it deploy under the repository's Actions tab."
