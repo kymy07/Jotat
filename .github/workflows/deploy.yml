@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 
 # Every pushed version tag (v1.0.0, v1.0.1, ...) publishes the site to GitHub Pages,
-# served as static files at https://kymy07.github.io/Snippit/ (no build step, no
+# served as static files at https://kymy07.github.io/Jotara/ (no build step, no
 # container), then creates a GitHub Release from CHANGELOG.md. Plain pushes to main do
 # not deploy. Manual runs via "Run workflow" redeploy the current VERSION.
 #
@@ -21,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-snippit
+  group: deploy-jotara
   cancel-in-progress: false
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
         id: version
         run: |
           VERSION=$(tr -d '[:space:]' < VERSION)
-          JS=$(grep -oP '(?<=SNIPPIT_VERSION = ")[^"]*' js/version.js)
+          JS=$(grep -oP '(?<=JOTARA_VERSION = ")[^"]*' js/version.js)
           echo "VERSION file: $VERSION · js/version.js: $JS · ref: $GITHUB_REF_NAME"
           if [ "$VERSION" != "$JS" ]; then
             echo "::error::VERSION ($VERSION) and js/version.js ($JS) disagree"; exit 1
@@ -47,7 +47,7 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match VERSION $VERSION — use ./release.sh"; exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "## Deploying Snippit v$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Deploying Jotara v$VERSION" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Inject Firebase config
         env:
@@ -128,9 +128,9 @@ jobs:
             on && index($0, "## [") == 1 { exit }
             on { print }
           ' CHANGELOG.md > notes.md
-          [ -s notes.md ] || echo "Snippit $VERSION" > notes.md
+          [ -s notes.md ] || echo "Jotara $VERSION" > notes.md
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" --title "Snippit $VERSION" --notes-file notes.md
+            gh release edit "$GITHUB_REF_NAME" --title "Jotara $VERSION" --notes-file notes.md
           else
-            gh release create "$GITHUB_REF_NAME" --title "Snippit $VERSION" --notes-file notes.md --verify-tag
+            gh release create "$GITHUB_REF_NAME" --title "Jotara $VERSION" --notes-file notes.md --verify-tag
           fi

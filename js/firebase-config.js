@@ -1,4 +1,4 @@
-// Firebase web config for the "Snippit" project (snippit-f17e8).
+// Firebase web config. The Firebase project keeps its original ID snippit-f17e8 (IDs cannot be renamed).
 // Get the missing values from: Firebase Console → Project settings (gear icon)
 // → General → "Your apps" → Web app (</>) → SDK setup and configuration → Config.
 export const firebaseConfig = {

@@ -1,6 +1,16 @@
 # Changelog
 
-All notable changes to Snippit. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+All notable changes to Jotara. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+
+## [1.1.0] — 2026-10-13
+
+### Changed
+- Renamed the app from **Snippit** to **Jotara** — logo, page titles, copy, README and workflow.
+- GitHub repository renamed to `kymy07/Jotara`; the site now lives at https://kymy07.github.io/Jotara/.
+- Version global renamed `SNIPPIT_VERSION` → `JOTARA_VERSION`.
+
+### Unchanged
+- Firebase project ID stays `snippit-f17e8` (project IDs cannot be renamed); existing accounts and notes are unaffected.
 
 ## [1.0.0] — 2026-10-13
 

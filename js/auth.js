@@ -18,8 +18,8 @@ const msg = $("#msg");
 let busy = false; // stops the auth listener redirecting mid-signup
 
 const COPY = {
-  login: { title: "Welcome<br>back.", sub: "Log in to pick up where you left off — every note, photo and scan is waiting.", doc: "Snippit — Log in" },
-  signup: { title: "Start<br>snipping.", sub: "Create a free account. Your notes stay private to you and sync across every device.", doc: "Snippit — Sign up" },
+  login: { title: "Welcome<br>back.", sub: "Log in to pick up where you left off — every note, photo and scan is waiting.", doc: "Jotara — Log in" },
+  signup: { title: "Start<br>jotting.", sub: "Create a free account. Your notes stay private to you and sync across every device.", doc: "Jotara — Sign up" },
 };
 
 function setMode(mode) {
