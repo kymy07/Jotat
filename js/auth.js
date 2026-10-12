@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, configMissing } from "./firebase.js";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -8,8 +8,12 @@ import {
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { ref, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { ref, get, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const $ = (s) => document.querySelector(s);
 const loginForm = $("#loginForm");
@@ -52,7 +56,10 @@ function friendly(err) {
     "auth/weak-password": "Password needs at least 6 characters.",
     "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/network-request-failed": "Network error — check your connection.",
-    "auth/operation-not-allowed": "Email/Password sign-in is not enabled in Firebase Authentication yet.",
+    "auth/operation-not-allowed": "This sign-in method is not enabled in Firebase Authentication yet.",
+    "auth/unauthorized-domain": `This domain (${location.hostname}) is not authorized for sign-in. Add it in Firebase → Authentication → Settings → Authorized domains.`,
+    "auth/account-exists-with-different-credential": "That email already has an account with a password. Log in with email first.",
+    "auth/popup-blocked": "Your browser blocked the Google pop-up. Allow pop-ups for this site and try again.",
     "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "Firebase API key missing or invalid — check js/firebase-config.js.",
   };
   return map[err.code] || err.message.replace("Firebase: ", "");
@@ -118,6 +125,54 @@ signupForm.addEventListener("submit", async (e) => {
     setLoading(signupForm, false);
   }
 });
+
+// Google sign-in doubles as sign-up: the first visit creates the account and profile.
+async function ensureProfile(user) {
+  const profileRef = ref(db, `users/${user.uid}/profile`);
+  if ((await get(profileRef)).exists()) return;
+  await set(profileRef, {
+    name: user.displayName || user.email.split("@")[0],
+    email: user.email,
+    provider: "google",
+    createdAt: serverTimestamp(),
+  });
+}
+
+$("#googleBtn").addEventListener("click", async () => {
+  hideMsg();
+  const btn = $("#googleBtn");
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  busy = true;
+  btn.disabled = true;
+  $("#googleLabel").textContent = "Connecting to Google…";
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    const { user } = await signInWithPopup(auth, provider);
+    await ensureProfile(user);
+    location.replace("app.html");
+  } catch (err) {
+    if (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment") {
+      return signInWithRedirect(auth, provider); // comes back to this page; handled below
+    }
+    busy = false;
+    btn.disabled = false;
+    $("#googleLabel").textContent = "Continue with Google";
+    if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") showMsg(friendly(err));
+  }
+});
+
+// Return leg of the redirect fallback
+if (!configMissing) {
+  busy = true;
+  getRedirectResult(auth)
+  .then(async (result) => {
+    if (!result) { busy = false; if (auth.currentUser) location.replace("app.html"); return; }
+    await ensureProfile(result.user);
+    location.replace("app.html");
+  })
+  .catch((err) => { busy = false; showMsg(friendly(err)); });
+}
 
 $("#forgotBtn").addEventListener("click", async () => {
   const email = loginForm.elements.email.value.trim();

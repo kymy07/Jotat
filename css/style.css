@@ -306,6 +306,12 @@ img { max-width: 100%; display: block; }
 .check input { accent-color: var(--ink); width: 15px; height: 15px; }
 .link { text-decoration: underline; text-underline-offset: 3px; }
 .btn-block { width: 100%; height: 50px; }
+.google-btn svg { width: 18px; height: 18px; }
+.divider {
+  display: flex; align-items: center; gap: 14px;
+  margin: 22px 0 18px;
+}
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .msg {
   margin-top: 16px; padding: 12px 14px;
   border: 1px solid var(--ink);

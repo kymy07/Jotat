@@ -2,6 +2,15 @@
 
 All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
+## [1.2.0] — 2026-10-13
+
+### Added
+- **Continue with Google** on the log-in and sign-up page (Firebase Authentication, pop-up with redirect fallback).
+  The first Google sign-in creates the account and its profile automatically.
+
+### Changed
+- README: live site is now https://jotat.netlify.app/; GitHub Pages kept as a tag-driven mirror.
+
 ## [1.1.1] — 2026-10-13
 
 ### Changed

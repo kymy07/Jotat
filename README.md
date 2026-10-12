@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://jotat.netlify.app/
 
-Current version: **1.1.1** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.2.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface**: oversized condensed
 headlines, a single ink colour for all text, black pill buttons, film grain, and
@@ -20,7 +20,7 @@ a camera viewfinder that turns snapshots into searchable notes.
 ## Tech stack
 
 - **Vanilla HTML/CSS/JS** — no build step, no bundler, no framework
-- **Firebase Authentication 10.14** — email / password sign-up, log-in, reset
+- **Firebase Authentication 10.14** — Google sign-in, email / password sign-up, log-in, reset
 - **Firebase Realtime Database 10.14** — per-user notes and photos, live sync
 - **Tesseract.js 5.1** — in-browser OCR, `eng` + `msa` language data
 - **MediaDevices `getUserMedia`** — live camera with front / back flip
@@ -42,7 +42,7 @@ Jotat/
 ├── js/
 │   ├── firebase-config.js   # Firebase web config (apiKey / appId injected at deploy)
 │   ├── firebase.js          # initialises Firebase, exports auth + db
-│   ├── auth.js              # sign-up, log-in, persistence, password reset
+│   ├── auth.js              # Google sign-in, email sign-up / log-in, password reset
 │   ├── app.js               # notes CRUD, autosave, search, camera, OCR
 │   └── version.js           # app version shown in the UI (v1.0.0)
 ├── assets/favicon.svg       # brand mark (four-point spark)
@@ -86,7 +86,8 @@ rename to Jotat; Firebase project IDs cannot change)
 
 1. **Project settings → General → Your apps** — add a Web app (`</>`) and copy
    `apiKey`, `messagingSenderId` and `appId`.
-2. **Authentication → Sign-in method** — enable **Email/Password**.
+2. **Authentication → Sign-in method** — enable **Email/Password** and **Google**
+   (pick a support email when enabling Google).
 3. **Authentication → Settings → Authorized domains** — add `jotat.netlify.app`
    (and `kymy07.github.io` if you also use the GitHub Pages mirror).
 4. **Realtime Database → Rules** — paste [`database.rules.json`](database.rules.json) and publish.
@@ -112,7 +113,7 @@ warning bar at the top.
 
 | # | Feature            | Entry point              | What it does                                                      |
 |---|--------------------|--------------------------|-------------------------------------------------------------------|
-| 1 | Sign up / log in   | `auth.js`                | Email + password accounts, *Remember me*, password reset by email |
+| 1 | Sign up / log in   | `auth.js`                | Continue with Google, or email + password with *Remember me* and reset by email |
 | 2 | Notes list         | `renderList()`           | Pinned first, then newest; tags for *Pinned*, *Photo*, *Scanned*   |
 | 3 | Editor + autosave  | `scheduleSave()`         | Saves 600 ms after you stop typing — no save button               |
 | 4 | Search             | `#searchInput`           | Live filter across titles and note text                           |
@@ -245,8 +246,12 @@ sign-in header and the notes list.
 - **Photos live in the Realtime Database.** They are resized to 1280 px JPEG to
   stay small, but thousands of photos will grow the database — move them to
   Cloud Storage if that happens.
-- **Authorized domains.** Sign-in fails with `auth/unauthorized-domain` until
-  the hosting domain is added in Firebase Authentication settings.
+- **Authorized domains.** Sign-in (Google and email) fails with
+  `auth/unauthorized-domain` until the hosting domain is added in Firebase
+  Authentication settings.
+- **Google sign-in uses a pop-up.** If the browser blocks it, the page falls
+  back to a full-page redirect; on some browsers that redirect is unreliable on
+  domains other than `*.firebaseapp.com`, so allowing pop-ups is the safer fix.
 
 ---
 
