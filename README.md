@@ -7,7 +7,7 @@ in **English and Bahasa Melayu**. Accounts and notes live in **Firebase**
 with a vintage-editorial palette
 (`#151515` ink · `#D9D9CF` canvas · `#E7E7DF` paper).
 
-Live demo: https://kymy07.github.io/Jotat/
+Live demo: https://jotat.netlify.app/
 
 Current version: **1.1.1** — see [CHANGELOG.md](CHANGELOG.md).
 
@@ -87,7 +87,8 @@ rename to Jotat; Firebase project IDs cannot change)
 1. **Project settings → General → Your apps** — add a Web app (`</>`) and copy
    `apiKey`, `messagingSenderId` and `appId`.
 2. **Authentication → Sign-in method** — enable **Email/Password**.
-3. **Authentication → Settings → Authorized domains** — add `kymy07.github.io`.
+3. **Authentication → Settings → Authorized domains** — add `jotat.netlify.app`
+   (and `kymy07.github.io` if you also use the GitHub Pages mirror).
 4. **Realtime Database → Rules** — paste [`database.rules.json`](database.rules.json) and publish.
 
 The three config values can go in two places:
@@ -158,10 +159,20 @@ noise layer adds the film grain.
 
 ## Deployment
 
-### GitHub Pages (current)
+### Netlify (current)
 
-The site runs at **https://kymy07.github.io/Jotat/**, served as static files
-by GitHub Pages — no build step, no container.
+The site runs at **https://jotat.netlify.app/**, served as static files by
+Netlify — no build step, no container. Netlify publishes the repository root
+as-is; there is no `./dist`.
+
+> The Firebase-secret injection below is part of the GitHub Actions workflow and
+> does not run on Netlify. For sign-in to work on Netlify, the Firebase config
+> must be in `js/firebase-config.js` (or injected by a Netlify build step), and
+> `jotat.netlify.app` must be an authorized domain in Firebase Authentication.
+
+### GitHub Pages (mirror, tag-driven)
+
+A mirror runs at **https://kymy07.github.io/Jotat/**, served by GitHub Pages.
 
 Deploys are **driven by version tags**. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 runs when a tag like `v1.0.0` is pushed (or manually: *Actions → Deploy to GitHub Pages → Run workflow*):
@@ -173,8 +184,8 @@ runs when a tag like `v1.0.0` is pushed (or manually: *Actions → Deploy to Git
 5. check that `/`, `auth.html`, `app.html`, the stylesheet and the app script answer 200
 6. create a **GitHub Release** for the tag, with that version's notes from `CHANGELOG.md`
 
-Ordinary pushes to `main` do **not** deploy — only a version tag does, so what
-is live always matches a numbered release.
+Ordinary pushes to `main` do **not** run this workflow — only a version tag
+does, so the GitHub Pages mirror always matches a numbered release.
 
 Pages must be set to **Settings → Pages → Source: GitHub Actions**, and the
 `github-pages` environment must allow tags matching `v*.*.*`
