@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Snippit — Log in</title>
+  <meta name="theme-color" content="#d9d9cf">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="logo" href="index.html">Snippit.<br>Notes &amp; Scans.</a>
+    <span></span>
+    <div class="topbar__right">
+      <a class="pill pill--ghost" href="index.html">← Home</a>
+    </div>
+  </header>
+
+  <main class="auth">
+    <h1 class="auth__big" id="bigTitle">
+      Welcome<br>back.
+      <small id="bigSub">Log in to pick up where you left off — every note, photo and scan is waiting.</small>
+    </h1>
+
+    <section class="auth__card">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabLogin" aria-selected="true">Log in</button>
+        <button role="tab" id="tabSignup" aria-selected="false">Sign up</button>
+      </div>
+
+      <!-- LOGIN -->
+      <form id="loginForm" novalidate>
+        <label class="field">
+          <span class="mono-label">Email</span>
+          <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span class="mono-label">Password</span>
+          <div class="field__pw">
+            <input type="password" name="password" autocomplete="current-password" required>
+            <button type="button" class="mono-label toggle-pw">Show</button>
+          </div>
+        </label>
+        <div class="row mono-label">
+          <label class="check"><input type="checkbox" name="remember" checked> Remember me</label>
+          <button type="button" class="link mono-label" id="forgotBtn">Forgot password?</button>
+        </div>
+        <button class="pill pill--dark btn-block" type="submit">Log in</button>
+      </form>
+
+      <!-- SIGNUP -->
+      <form id="signupForm" class="hidden" novalidate>
+        <label class="field">
+          <span class="mono-label">Name</span>
+          <input type="text" name="name" autocomplete="name" required>
+        </label>
+        <label class="field">
+          <span class="mono-label">Email</span>
+          <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span class="mono-label">Password (min 6 characters)</span>
+          <div class="field__pw">
+            <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+            <button type="button" class="mono-label toggle-pw">Show</button>
+          </div>
+        </label>
+        <label class="field">
+          <span class="mono-label">Confirm password</span>
+          <input type="password" name="confirm" autocomplete="new-password" required>
+        </label>
+        <button class="pill pill--dark btn-block" type="submit" style="margin-top:10px">Create account</button>
+      </form>
+
+      <div class="msg" id="msg" role="alert"></div>
+    </section>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

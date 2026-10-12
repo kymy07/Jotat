@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Snippit — My notes</title>
+  <meta name="theme-color" content="#d9d9cf">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
+</head>
+<body class="app-body">
+
+  <header class="topbar">
+    <a class="logo" href="index.html">Snippit.<br>Notes &amp; Scans.</a>
+    <span></span>
+    <div class="topbar__right">
+      <div class="who mono-label">
+        <div id="userName">—</div>
+        <div id="userEmail"></div>
+      </div>
+      <button class="pill pill--dark" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <div class="app" id="app">
+    <!-- LIST -->
+    <aside class="sidebar">
+      <div class="sidebar__head">
+        <div class="sidebar__title">
+          <h1>Notes</h1>
+          <span class="mono-label" id="noteCount">0 notes</span>
+        </div>
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="search" id="searchInput" placeholder="Search notes…" aria-label="Search notes">
+        </label>
+        <div class="sidebar__actions">
+          <button class="pill pill--dark" id="newBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke="currentColor"/></svg>
+            New note
+          </button>
+          <button class="pill pill--ghost" id="snapBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Snap &amp; scan
+          </button>
+        </div>
+      </div>
+      <ul class="note-list" id="noteList"></ul>
+    </aside>
+
+    <!-- EDITOR -->
+    <section class="editor" id="editor">
+      <div class="editor__bar">
+        <div class="group">
+          <button class="icon-btn back-btn" id="backBtn" aria-label="Back to notes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <span class="mono-label" id="saveStatus">Saved</span>
+        </div>
+        <div class="group">
+          <button class="icon-btn" id="pinBtn" aria-label="Pin note" title="Pin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.5l2.6 6.1 6.4.5-4.9 4.2 1.5 6.4L12 16.3l-5.6 3.4 1.5-6.4L3 9.1l6.4-.5z"/></svg>
+          </button>
+          <button class="icon-btn" id="copyBtn" aria-label="Copy text" title="Copy text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></svg>
+          </button>
+          <button class="pill pill--ghost" id="attachBtn" title="Add photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <span>Photo</span>
+          </button>
+          <button class="icon-btn" id="deleteBtn" aria-label="Delete note" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor__scroll">
+        <div class="editor__inner">
+          <input class="title-input" id="titleInput" placeholder="Untitled" maxlength="140" aria-label="Note title">
+          <div class="meta-line mono-label">
+            <span id="metaDate">—</span>
+            <span id="metaWords">0 words</span>
+          </div>
+
+          <div class="attachment" id="attachment">
+            <img id="attachmentImg" alt="Attached photo">
+            <div class="attachment__bar">
+              <span class="mono-label">( Attached photo )</span>
+              <div class="group" style="display:flex;gap:8px">
+                <button class="pill pill--dark" id="ocrBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 10h8M8 14h5" stroke="currentColor"/></svg>
+                  Read text
+                </button>
+                <button class="pill pill--ghost" id="removeImgBtn">Remove</button>
+              </div>
+            </div>
+            <div class="ocr-progress" id="ocrProgress">
+              <span class="mono-label" id="ocrLabel">Reading text…</span>
+              <div class="ocr-progress__track"><div class="ocr-progress__fill" id="ocrFill"></div></div>
+            </div>
+          </div>
+
+          <textarea class="body-input" id="bodyInput" placeholder="Start writing… or snap a photo and let Snippit read it for you." aria-label="Note body"></textarea>
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <h2>Pick a n<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>te<br>or start one.</h2>
+        <div class="actions">
+          <button class="pill pill--dark" data-action="new">New note</button>
+          <button class="pill pill--ghost" data-action="snap">Snap &amp; scan</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- CAMERA -->
+  <div class="modal" id="camModal" role="dialog" aria-modal="true" aria-label="Camera">
+    <div class="modal__top">
+      <span class="mono-label">( Point at text · hold steady )</span>
+      <button class="icon-btn" id="camClose" aria-label="Close camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="modal__stage">
+      <video id="camVideo" playsinline autoplay muted></video>
+      <div class="viewfinder"><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="modal__bottom">
+      <button class="pill pill--ghost" id="camUpload">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" stroke="currentColor"/></svg>
+        Upload
+      </button>
+      <button class="shutter" id="camShutter" aria-label="Take photo"></button>
+      <button class="pill pill--ghost" id="camFlip">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3M18 3v4h-4M6 21v-4h4" stroke="currentColor"/></svg>
+        Flip
+      </button>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+  <input type="file" id="fileInputGallery" accept="image/*" hidden>
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

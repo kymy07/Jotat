@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Snippit — Jot it down, snap it in</title>
+  <meta name="description" content="Snippit: jot notes, snap photos and turn printed text into editable notes with OCR.">
+  <meta name="theme-color" content="#d9d9cf">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&family=Caveat:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="logo" href="index.html">Snippit.<br>Notes &amp; Scans.</a>
+    <nav class="topnav mono-label">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#ocr">Scan to text</a>
+      <a href="auth.html?mode=signup">Sign up</a>
+    </nav>
+    <div class="topbar__right">
+      <a class="pill pill--ghost" href="auth.html">Log in</a>
+      <a class="pill pill--dark" href="auth.html?mode=signup">Start free</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1 class="hero__title" aria-label="Jot it down, snap it in">
+        <span>Jot it d<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>wn</span>
+        <span>Snap it in</span>
+      </h1>
+
+      <a class="pill pill--paper hero__cta" href="auth.html?mode=signup">Get started — it's free</a>
+
+      <div class="hero__visual" aria-hidden="true">
+        <div class="paper paper--a">
+          Meeting — Tues<br>
+          · budget Q4 ✓<br>
+          · call vendor<br>
+          · <strike>print slides</strike><br>
+          ideas → app!!
+        </div>
+        <div class="paper paper--b">
+          beli susu<br>
+          roti, telur<br>
+          bayar bil ☐
+        </div>
+        <div class="viewfinder"><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="hero__side">
+        <div class="hero__thumb" aria-hidden="true"></div>
+        <span class="year mono-label">( 2026 )</span>
+        <p class="statement">
+          <em></em>Not just a notepad. A camera, a scanner, and your second memory — all in one place.
+        </p>
+        <p class="hero__note">
+          Snap a whiteboard, a receipt or a page from a book. Snippit reads the text for you and turns it into a note you can edit, search and keep forever.
+        </p>
+      </div>
+
+      <a class="pill pill--dark hero__journey" href="#features">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9" stroke="currentColor"/><path d="M12 8v8M8 12l4 4 4-4" stroke="currentColor"/></svg>
+        See what it does
+      </a>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section__head">
+        <h2 class="section__title">Four tools.<br>One notebook.</h2>
+        <span class="mono-label">( Features )</span>
+      </div>
+      <div class="features" id="how">
+        <article class="feature">
+          <span class="feature__no">01 /</span>
+          <h3>Jot</h3>
+          <p>A clean, distraction-free editor. Notes save themselves as you type — no save button, no lost thoughts.</p>
+        </article>
+        <article class="feature">
+          <span class="feature__no">02 /</span>
+          <h3>Snap</h3>
+          <p>Open your camera right inside the app, or upload a photo. The image stays attached to your note.</p>
+        </article>
+        <article class="feature" id="ocr">
+          <span class="feature__no">03 /</span>
+          <h3>Read (OCR)</h3>
+          <p>Printed text in your photo becomes real, editable text. Works for English and Bahasa Melayu.</p>
+        </article>
+        <article class="feature">
+          <span class="feature__no">04 /</span>
+          <h3>Sync</h3>
+          <p>Log in on your phone or laptop and your notes are there. Private to your account, synced in real time.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <h2>Old habit.<br>New notes.</h2>
+      <a class="pill pill--dark" href="auth.html?mode=signup">Create your account</a>
+    </section>
+  </main>
+
+  <footer class="footer mono-label">
+    <span>© 2026 Snippit.</span>
+    <span>Jot · Snap · Read · Sync</span>
+  </footer>
+
+  <script type="module">
+    import { auth } from "./js/firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    // Logged-in visitors get a shortcut straight to their notes
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      document.querySelectorAll('a[href^="auth.html"]').forEach((a) => {
+        a.href = "app.html";
+        if (!a.closest(".topbar")) return;
+        if (a.classList.contains("pill--ghost")) a.remove();
+        else a.textContent = "My notes";
+      });
+    });
+  </script>
+</body>
+</html>
