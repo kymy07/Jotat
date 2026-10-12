@@ -2,6 +2,12 @@
 
 All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
+## [1.2.1] — 2026-10-13
+
+### Fixed
+- Connected the app to Firebase: real web config (`apiKey`, `messagingSenderId`, `appId`, `measurementId`)
+  in `js/firebase-config.js`, so sign-in and the Realtime Database work on the live sites.
+
 ## [1.2.0] — 2026-10-13
 
 ### Added

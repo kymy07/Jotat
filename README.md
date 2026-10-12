@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://jotat.netlify.app/
 
-Current version: **1.2.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.2.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface**: oversized condensed
 headlines, a single ink colour for all text, black pill buttons, film grain, and
@@ -104,7 +104,8 @@ The three config values can go in two places:
 > database rules, which only let a signed-in user read and write
 > `users/{their uid}`. Keeping it in secrets just keeps the repo tidy.
 
-While any value is still a `PASTE_…` placeholder, every page shows a black
+The config for `snippit-f17e8` is committed in `js/firebase-config.js`. If a
+value is ever reset to a `PASTE_…` placeholder, every page shows a black
 warning bar at the top.
 
 ---
