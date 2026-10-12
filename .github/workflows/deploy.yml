@@ -1,19 +1,22 @@
 name: Deploy to GitHub Pages
 
-# Every push to main publishes the site to GitHub Pages, served as static files at
-# https://kymy07.github.io/Snippit/ (no build step, no container). Manual runs via
-# "Run workflow".
+# Every pushed version tag (v1.0.0, v1.0.1, ...) publishes the site to GitHub Pages,
+# served as static files at https://kymy07.github.io/Snippit/ (no build step, no
+# container), then creates a GitHub Release from CHANGELOG.md. Plain pushes to main do
+# not deploy. Manual runs via "Run workflow" redeploy the current VERSION.
+#
+# Cut a release with:  ./release.sh 1.0.1
 #
 # Optional: set the repository secrets FIREBASE_API_KEY, FIREBASE_MESSAGING_SENDER_ID
 # and FIREBASE_APP_ID to inject the Firebase web config at deploy time instead of
 # committing it. Any secret that is not set leaves js/firebase-config.js unchanged.
 on:
   push:
-    branches: [main]
+    tags: ["v*.*.*"]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -30,6 +33,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check version
+        id: version
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          JS=$(grep -oP '(?<=SNIPPIT_VERSION = ")[^"]*' js/version.js)
+          echo "VERSION file: $VERSION · js/version.js: $JS · ref: $GITHUB_REF_NAME"
+          if [ "$VERSION" != "$JS" ]; then
+            echo "::error::VERSION ($VERSION) and js/version.js ($JS) disagree"; exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION $VERSION — use ./release.sh"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "## Deploying Snippit v$VERSION" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Inject Firebase config
         env:
@@ -64,7 +82,7 @@ jobs:
             --exclude='.firebaserc' \
             --exclude='firebase.json' \
             --exclude='database.rules.json' \
-            --exclude='README.md' \
+            --exclude='README.md'             --exclude='CHANGELOG.md'             --exclude='release.sh' \
             --exclude='_site' \
             ./ _site/
           touch _site/.nojekyll
@@ -96,3 +114,23 @@ jobs:
             [ "$code" = "200" ] || exit 1
           done
           echo "Live at ${BASE}"
+          echo "Live at ${BASE}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # This version's section of CHANGELOG.md becomes the release notes.
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && index($0, "## [") == 1 { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Snippit $VERSION" > notes.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "Snippit $VERSION" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "Snippit $VERSION" --notes-file notes.md --verify-tag
+          fi

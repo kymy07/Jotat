@@ -1,8 +1,8 @@
 # Changelog
 
-All notable changes to Snippit. Versions use `MAJOR.MINOR` (e.g. `1.00`, `1.01`, `2.00`).
+All notable changes to Snippit. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
-## [1.00] — 2026-10-13
+## [1.0.0] — 2026-10-13
 
 First release.
 

@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://kymy07.github.io/Snippit/
 
-Current version: **1.00** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.0.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface**: oversized condensed
 headlines, a single ink colour for all text, black pill buttons, film grain, and
@@ -44,15 +44,16 @@ Snippit/
 │   ├── firebase.js          # initialises Firebase, exports auth + db
 │   ├── auth.js              # sign-up, log-in, persistence, password reset
 │   ├── app.js               # notes CRUD, autosave, search, camera, OCR
-│   └── version.js           # app version shown in the UI (v1.00)
+│   └── version.js           # app version shown in the UI (v1.0.0)
 ├── assets/favicon.svg       # brand mark (four-point spark)
 ├── database.rules.json      # Realtime Database security rules
 ├── firebase.json            # Firebase CLI config (rules + optional Hosting)
-├── VERSION                  # current version number (1.00)
+├── VERSION                  # current version number (1.0.0)
 ├── CHANGELOG.md             # release notes per version
+├── release.sh               # bump version, commit, tag and push a release
 ├── .firebaserc              # default Firebase project: snippit-f17e8
 └── .github/workflows/
-    └── deploy.yml           # GitHub Pages deploy on every push to main
+    └── deploy.yml           # deploy + GitHub Release on every version tag (v*.*.*)
 ```
 
 ---
@@ -161,20 +162,22 @@ noise layer adds the film grain.
 The site runs at **https://kymy07.github.io/Snippit/**, served as static files
 by GitHub Pages — no build step, no container.
 
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main` (or
-manually: *Actions → Deploy to GitHub Pages → Run workflow*):
+Deploys are **driven by version tags**. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+runs when a tag like `v1.0.0` is pushed (or manually: *Actions → Deploy to GitHub Pages → Run workflow*):
 
-1. optionally inject the Firebase config from repository secrets (see *Firebase setup*)
-2. stage the site into `_site/`, excluding `.git`, `.github`, Firebase CLI files and this README, and list every published file in the log
-3. upload and deploy to GitHub Pages
-4. check that `/`, `auth.html`, `app.html`, the stylesheet and the app script answer 200
+1. check that the tag matches `VERSION` and `js/version.js` — a mismatch stops the deploy
+2. optionally inject the Firebase config from repository secrets (see *Firebase setup*)
+3. stage the site into `_site/`, excluding `.git`, `.github`, Firebase CLI files, docs and `release.sh`, and list every published file in the log
+4. upload and deploy to GitHub Pages
+5. check that `/`, `auth.html`, `app.html`, the stylesheet and the app script answer 200
+6. create a **GitHub Release** for the tag, with that version's notes from `CHANGELOG.md`
 
-```bash
-git push origin main
-```
+Ordinary pushes to `main` do **not** deploy — only a version tag does, so what
+is live always matches a numbered release.
 
 Pages must be set to **Settings → Pages → Source: GitHub Actions**. Each run's
-log and the deployed URL are visible under the repository's **Actions** tab.
+log and the deployed URL are visible under the repository's **Actions** tab;
+every release is listed under **Releases**.
 
 ### Firebase Hosting (alternative)
 
@@ -190,20 +193,28 @@ firebase deploy            # publishes the site + database.rules.json
 
 ## Versioning
 
-Versions are `MAJOR.MINOR` — currently **1.00**. To release a new one
-(e.g. `1.01`):
+Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`,
+currently **1.0.0**.
 
-1. bump `VERSION` and `window.SNIPPIT_VERSION` in `js/version.js`
-2. add a section to [`CHANGELOG.md`](CHANGELOG.md)
-3. commit, tag and push — the deploy runs on the push to `main`
+| Change                          | Example          |
+|---------------------------------|------------------|
+| Bug fix, small tweak            | `1.0.0 → 1.0.1`  |
+| New feature, backwards-compatible | `1.0.1 → 1.1.0` |
+| Breaking change / redesign      | `1.1.0 → 2.0.0`  |
+
+To release a new version:
+
+1. add a `## [1.0.1] — YYYY-MM-DD` section to [`CHANGELOG.md`](CHANGELOG.md)
+2. run the release script (Git Bash on Windows):
 
 ```bash
-git commit -am "Release 1.01"
-git tag -a v1.01 -m "Snippit 1.01"
-git push origin main --tags
+./release.sh 1.0.1
 ```
 
-The version shows in the landing footer, the sign-in header and the notes list.
+It writes the number into `VERSION`, `js/version.js`, the page labels and this
+README, commits, tags `v1.0.1` and pushes — the tag push deploys the site and
+publishes the GitHub Release. The version shows in the landing footer, the
+sign-in header and the notes list.
 
 ---
 
