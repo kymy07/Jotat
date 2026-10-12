@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/version.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 </head>
 <body class="app-body">
@@ -32,7 +33,7 @@
       <div class="sidebar__head">
         <div class="sidebar__title">
           <h1>Notes</h1>
-          <span class="mono-label" id="noteCount">0 notes</span>
+          <span class="mono-label"><span id="noteCount">0 notes</span> · <span data-version>v1.00</span></span>
         </div>
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>

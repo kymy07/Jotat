@@ -1,0 +1,98 @@
+name: Deploy to GitHub Pages
+
+# Every push to main publishes the site to GitHub Pages, served as static files at
+# https://kymy07.github.io/Snippit/ (no build step, no container). Manual runs via
+# "Run workflow".
+#
+# Optional: set the repository secrets FIREBASE_API_KEY, FIREBASE_MESSAGING_SENDER_ID
+# and FIREBASE_APP_ID to inject the Firebase web config at deploy time instead of
+# committing it. Any secret that is not set leaves js/firebase-config.js unchanged.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-snippit
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject Firebase config
+        env:
+          # Read via env, never interpolated straight into the script body.
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          CONFIG=js/firebase-config.js
+          inject() {
+            key="$1"; value="$2"
+            if [ -z "$value" ]; then
+              echo "$key secret not set — keeping the value committed in $CONFIG"
+              return
+            fi
+            sed -i -E "s|(${key}: \")[^\"]*(\")|\1${value}\2|" "$CONFIG"
+            grep -q "${key}: \"${value}\"" "$CONFIG" || { echo "::error::Could not inject $key"; exit 1; }
+            echo "$key injected"
+          }
+          inject apiKey "$FIREBASE_API_KEY"
+          inject messagingSenderId "$FIREBASE_MESSAGING_SENDER_ID"
+          inject appId "$FIREBASE_APP_ID"
+
+      - name: Stage site
+        # Only what the browser needs: repo tooling, docs and dotfiles stay behind.
+        run: |
+          mkdir _site
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            --exclude='.firebaserc' \
+            --exclude='firebase.json' \
+            --exclude='database.rules.json' \
+            --exclude='README.md' \
+            --exclude='_site' \
+            ./ _site/
+          touch _site/.nojekyll
+          echo "Files published:"
+          find _site -type f | sed 's|^_site/|  |' | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Health check
+        env:
+          BASE: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for page in "" auth.html app.html css/style.css js/app.js; do
+            code=""
+            for attempt in 1 2 3 4 5 6; do
+              code=$(curl -s -m 20 -o /dev/null -w "%{http_code}" "${BASE}${page}")
+              [ "$code" = "200" ] && break
+              sleep 10
+            done
+            echo "/$page -> HTTP $code"
+            [ "$code" = "200" ] || exit 1
+          done
+          echo "Live at ${BASE}"
