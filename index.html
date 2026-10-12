@@ -15,60 +15,94 @@
 </head>
 <body>
 
-  <header class="topbar">
+  <header class="topbar topbar--sticky">
     <a class="logo" href="index.html">Jotat.<br>Notes &amp; Scans.</a>
-    <nav class="topnav mono-label">
-      <a href="#features">Features</a>
+    <nav class="topnav" aria-label="Sections">
       <a href="#how">How it works</a>
+      <a href="#features">Features</a>
       <a href="#ocr">Scan to text</a>
-      <a href="auth.html?mode=signup">Sign up</a>
     </nav>
     <div class="topbar__right">
-      <a class="pill pill--ghost" href="auth.html">Log in</a>
-      <a class="pill pill--dark" href="auth.html?mode=signup">Start free</a>
+      <a class="pill pill--glass pill--sm" href="auth.html">Log in</a>
+      <a class="pill pill--dark pill--sm" href="auth.html?mode=signup">Start free</a>
     </div>
   </header>
 
   <main>
     <section class="hero">
+      <span class="chip"><svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg> Notes · Camera · OCR</span>
       <h1 class="hero__title" aria-label="Jot it down, snap it in">
         <span>Jot it d<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>wn</span>
         <span>Snap it in</span>
       </h1>
 
-      <a class="pill pill--paper hero__cta" href="auth.html?mode=signup">Get started — it's free</a>
-
-      <div class="hero__visual" aria-hidden="true">
-        <div class="paper paper--a">
-          Meeting — Tues<br>
-          · budget Q4 ✓<br>
-          · call vendor<br>
-          · <strike>print slides</strike><br>
-          ideas → app!!
+      <div class="hero__grid">
+        <div class="hero__visual" aria-hidden="true">
+          <div class="paper paper--a">
+            Meeting — Tues<br>
+            · budget Q4 ✓<br>
+            · call vendor<br>
+            · <strike>print slides</strike><br>
+            ideas → app!!
+          </div>
+          <div class="paper paper--b">
+            beli susu<br>
+            roti, telur<br>
+            bayar bil ☐
+          </div>
+          <div class="viewfinder"><i></i><i></i><i></i><i></i></div>
+          <div class="float-chip float-chip--top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 10h8M8 14h5"/></svg>
+            Text found · 18 words
+          </div>
+          <div class="float-chip float-chip--bottom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            Saved to your notes
+          </div>
         </div>
-        <div class="paper paper--b">
-          beli susu<br>
-          roti, telur<br>
-          bayar bil ☐
+
+        <div class="hero__side">
+          <span class="year mono-label">( 2026 )</span>
+          <p class="statement">Not just a notepad. A camera, a scanner, and your second memory — all in one place.</p>
+          <p class="lead">Snap a whiteboard, a receipt or a page from a book. Jotat reads the text for you and turns it into a note you can edit, search and keep.</p>
+          <div class="hero__ctas">
+            <a class="pill pill--dark pill--lg" href="auth.html?mode=signup">Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="pill pill--glass pill--lg" href="auth.html">I have an account</a>
+          </div>
+          <ul class="ticks mono-label">
+            <li>Free</li>
+            <li>Works on your phone</li>
+            <li>English &amp; Bahasa Melayu</li>
+          </ul>
         </div>
-        <div class="viewfinder"><i></i><i></i><i></i><i></i></div>
       </div>
+    </section>
 
-      <div class="hero__side">
-        <div class="hero__thumb" aria-hidden="true"></div>
-        <span class="year mono-label">( 2026 )</span>
-        <p class="statement">
-          <em></em>Not just a notepad. A camera, a scanner, and your second memory — all in one place.
-        </p>
-        <p class="hero__note">
-          Snap a whiteboard, a receipt or a page from a book. Jotat reads the text for you and turns it into a note you can edit, search and keep forever.
-        </p>
+    <section class="section" id="how">
+      <div class="section__head">
+        <h2 class="section__title">Three steps.<br>That's it.</h2>
+        <span class="mono-label">( How it works )</span>
       </div>
-
-      <a class="pill pill--dark hero__journey" href="#features">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9" stroke="currentColor"/><path d="M12 8v8M8 12l4 4 4-4" stroke="currentColor"/></svg>
-        See what it does
-      </a>
+      <ol class="steps">
+        <li class="glass-card step">
+          <span class="step__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+          <span class="mono-label">Step 01</span>
+          <h3>Snap</h3>
+          <p>Tap <b>Snap &amp; scan</b> and point your camera at any printed page — or upload a photo you already have.</p>
+        </li>
+        <li class="glass-card step">
+          <span class="step__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 10h8M8 14h5"/></svg></span>
+          <span class="mono-label">Step 02</span>
+          <h3>Read</h3>
+          <p>Jotat reads the text in the photo for you, in English or Bahasa Melayu. No typing it out by hand.</p>
+        </li>
+        <li class="glass-card step">
+          <span class="step__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6M9 7h3"/></svg></span>
+          <span class="mono-label">Step 03</span>
+          <h3>Keep</h3>
+          <p>The text lands in a note you can edit, search and pin. It saves itself and syncs to all your devices.</p>
+        </li>
+      </ol>
     </section>
 
     <section class="section" id="features">
@@ -76,24 +110,24 @@
         <h2 class="section__title">Four tools.<br>One notebook.</h2>
         <span class="mono-label">( Features )</span>
       </div>
-      <div class="features" id="how">
-        <article class="feature">
-          <span class="feature__no">01 /</span>
+      <div class="features">
+        <article class="glass-card feature">
+          <span class="feature__no mono-label">01 /</span>
           <h3>Jot</h3>
           <p>A clean, distraction-free editor. Notes save themselves as you type — no save button, no lost thoughts.</p>
         </article>
-        <article class="feature">
-          <span class="feature__no">02 /</span>
+        <article class="glass-card feature">
+          <span class="feature__no mono-label">02 /</span>
           <h3>Snap</h3>
           <p>Open your camera right inside the app, or upload a photo. The image stays attached to your note.</p>
         </article>
-        <article class="feature" id="ocr">
-          <span class="feature__no">03 /</span>
+        <article class="glass-card feature" id="ocr">
+          <span class="feature__no mono-label">03 /</span>
           <h3>Read (OCR)</h3>
           <p>Printed text in your photo becomes real, editable text. Works for English and Bahasa Melayu.</p>
         </article>
-        <article class="feature">
-          <span class="feature__no">04 /</span>
+        <article class="glass-card feature">
+          <span class="feature__no mono-label">04 /</span>
           <h3>Sync</h3>
           <p>Log in on your phone or laptop and your notes are there. Private to your account, synced in real time.</p>
         </article>
@@ -101,13 +135,19 @@
     </section>
 
     <section class="cta-band">
-      <h2>Old habit.<br>New notes.</h2>
-      <a class="pill pill--dark" href="auth.html?mode=signup">Create your account</a>
+      <div class="glass-card cta-band__card">
+        <h2>Old habit.<br>New notes.</h2>
+        <p class="lead">Free to start. Sign up with Google or email in seconds.</p>
+        <div class="hero__ctas hero__ctas--center">
+          <a class="pill pill--dark pill--lg" href="auth.html?mode=signup">Create your account <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="pill pill--glass pill--lg" href="auth.html">Log in</a>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer class="footer mono-label">
-    <span>© 2026 Jotat. · <span data-version>v1.2.1</span></span>
+    <span>© 2026 Jotat. · <span data-version>v1.3.0</span></span>
     <span>Jot · Snap · Read · Sync</span>
   </footer>
 
@@ -120,7 +160,7 @@
       document.querySelectorAll('a[href^="auth.html"]').forEach((a) => {
         a.href = "app.html";
         if (!a.closest(".topbar")) return;
-        if (a.classList.contains("pill--ghost")) a.remove();
+        if (a.classList.contains("pill--glass")) a.remove();
         else a.textContent = "My notes";
       });
     });

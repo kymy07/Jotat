@@ -2,6 +2,16 @@
 
 All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
+## [1.3.0] — 2026-10-13
+
+### Changed
+- Apple-style frosted-glass redesign, keeping the vintage-editorial type, single ink colour and paper-notes visual.
+- Buttons now read as buttons: solid ink primary with a soft sheen, frosted-glass secondary, hover lift and press feedback.
+- Landing page reorganised: floating glass header, clear "Start free" / "I have an account" actions in the hero,
+  new *How it works* (Snap → Read → Keep) section, features and sign-up band as glass cards.
+- Sign-in: segmented Log in / Sign up control, rounded glass inputs, error message moved to the top of the card.
+- Notes app: sidebar and editor as glass panels, card-style note rows, floating glass action bar on mobile.
+
 ## [1.2.1] — 2026-10-13
 
 ### Fixed
