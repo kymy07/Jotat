@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://jotat.netlify.app/
 
-Current version: **1.3.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.0.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface with Apple-style frosted
 glass**: oversized condensed headlines, a single ink colour for all text, glass
