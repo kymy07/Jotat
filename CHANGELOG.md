@@ -2,6 +2,26 @@
 
 All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
+## [1.1.0] — 2026-10-13
+
+### Added
+- **Rich editor** (Quill): bold, italic, underline, strikethrough; six fonts (Sans, Serif, Elegant, Display,
+  Handwriting, Mono); sizes; text colour and highlight; align left / centre / right / justify; bullet, numbered and
+  **tick (checklist)** lists; headings, quote, link, pictures; undo / redo.
+- **Emoji and symbol pickers** (ticks, arrows, maths, currency incl. RM, punctuation) and insert date & time.
+- **Handwrite → text**: write on the pad, tap ✓ and the word is typed into the note, with alternatives to pick
+  from if it guessed wrong (English / Bahasa Melayu).
+- **Sketch**: draw with colours, brush sizes, eraser and undo; added to the note as a picture.
+- **Voice note**: speech to text in English or Bahasa Melayu.
+- **Features tab** in the notes app: blank note, snap & scan, photo to text, handwrite, sketch, voice, checklist,
+  import .txt / .md, and templates (meeting, class, journal, project, shopping, recipe).
+- **Paper styles** per note (plain, lined, grid, dots) and **export** to Word, PDF (print) and plain text.
+
+### Changed
+- OCR cleans photos before reading — contrast stretch, shadow removal (adaptive threshold), upscaling small
+  images — tries a second pass when unsure, and drops noise lines. Better on uneven light and neat handwriting.
+- Formatted note content is stored separately (`users/{uid}/content/{id}`) so the note list stays fast.
+
 ## [1.0.0] — 2026-10-13
 
 First release.

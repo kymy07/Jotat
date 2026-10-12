@@ -1,8 +1,11 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
-  ref, push, set, update, remove, get, onValue, serverTimestamp,
+  ref, push, set, update, get, onValue, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {
+  EMOJI, SYMBOLS, TEMPLATES, createPad, recognizeInk, prepareForOcr, cleanOcrText, exportNote,
+} from "./tools.js";
 
 const $ = (s) => document.querySelector(s);
 const el = {
@@ -11,12 +14,13 @@ const el = {
   count: $("#noteCount"),
   search: $("#searchInput"),
   title: $("#titleInput"),
-  body: $("#bodyInput"),
   status: $("#saveStatus"),
   metaDate: $("#metaDate"),
   metaWords: $("#metaWords"),
   empty: $("#emptyState"),
   pin: $("#pinBtn"),
+  sheet: $("#sheet"),
+  paper: $("#paperSelect"),
   attachment: $("#attachment"),
   attachmentImg: $("#attachmentImg"),
   ocrBtn: $("#ocrBtn"),
@@ -34,6 +38,9 @@ let user = null;
 let notes = {};
 let currentId = null;
 let saveTimer = null;
+let loadingContent = false;
+let contentReady = Promise.resolve(); // resolves when the open note is loaded and editable
+const pendingHtml = {};      // template HTML to apply once a new note opens
 let camStream = null;
 let camTarget = "new";      // "new" = create a note from the capture, otherwise attach to current note
 let facing = "environment";
@@ -42,17 +49,87 @@ let ocrBusy = false;
 let currentImage = null;    // full-resolution image of the open note (used for OCR)
 
 const isMobile = () => matchMedia("(max-width: 760px)").matches;
+const userPath = () => `users/${user.uid}`;
 const notesPath = () => `users/${user.uid}/notes`;
 const notePath = (id) => `users/${user.uid}/notes/${id}`;
 const imagePath = (id) => `users/${user.uid}/images/${id}`;
+const contentPath = (id) => `users/${user.uid}/content/${id}`;
+
+/* ---------------- editor (Quill) ---------------- */
+const Font = Quill.import("formats/font");
+Font.whitelist = ["serif", "elegant", "display", "hand", "mono"];
+Quill.register(Font, true);
+const Size = Quill.import("attributors/style/size");
+Size.whitelist = ["12px", "14px", "20px", "24px", "32px", "48px"];
+Quill.register(Size, true);
+Quill.register(Quill.import("attributors/style/align"), true);
+
+const quill = new Quill("#quill", {
+  theme: "snow",
+  placeholder: "Start writing… or snap a photo and let Jotat read it for you.",
+  modules: {
+    toolbar: { container: "#toolbar", handlers: { image: () => $("#imageInsertInput").click() } },
+    history: { delay: 800, maxStack: 300, userOnly: true },
+  },
+});
+quill.disable();
+
+// The toolbar scrolls sideways on phones, which would clip Quill's dropdowns,
+// so open them as fixed-position menus under their button.
+document.querySelectorAll("#toolbar .ql-picker").forEach((picker) => {
+  const label = picker.querySelector(".ql-picker-label");
+  const options = picker.querySelector(".ql-picker-options");
+  label.addEventListener("mousedown", () => requestAnimationFrame(() => {
+    if (!picker.classList.contains("ql-expanded")) return;
+    const r = label.getBoundingClientRect();
+    options.style.position = "fixed";
+    options.style.right = "auto";
+    if (!picker.classList.contains("ql-color-picker")) {
+      options.style.width = "max-content";
+      options.style.minWidth = `${Math.max(r.width, 120)}px`;
+    }
+    options.style.top = `${r.bottom + 6}px`;
+    options.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - options.offsetWidth - 8))}px`;
+  }));
+});
+$("#toolbar").addEventListener("scroll", () => {
+  document.querySelectorAll("#toolbar .ql-picker.ql-expanded").forEach((p) => p.classList.remove("ql-expanded"));
+}, { passive: true });
+
+// The last place the caret was, so pickers and pads insert where the user was writing
+let lastRange = { index: 0, length: 0 };
+quill.on("selection-change", (range) => { if (range) lastRange = range; });
+const caret = () => {
+  const len = quill.getLength();
+  return Math.min(lastRange.index, len - 1);
+};
+function insertAtCaret(text) {
+  const at = caret();
+  quill.insertText(at, text, "user");
+  quill.setSelection(at + text.length, 0, "silent");
+  lastRange = { index: at + text.length, length: 0 };
+  return at;
+}
+function insertImageAtCaret(dataUrl) {
+  const at = caret();
+  quill.insertEmbed(at, "image", dataUrl, "user");
+  quill.insertText(at + 1, "\n", "user");
+  quill.setSelection(at + 2, 0, "silent");
+  lastRange = { index: at + 2, length: 0 };
+}
+
+quill.on("text-change", () => {
+  if (loadingContent || !currentId) return;
+  scheduleSave();
+});
 
 /* ---------------- helpers ---------------- */
 let toastTimer;
-function toast(text) {
+function toast(text, ms = 2600) {
   el.toast.textContent = text;
   el.toast.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2600);
+  toastTimer = setTimeout(() => el.toast.classList.remove("show"), ms);
 }
 
 function formatDate(ts) {
@@ -65,6 +142,7 @@ function formatDate(ts) {
   return d.toLocaleDateString("en-MY", { day: "numeric", month: "short", year: "numeric" });
 }
 
+const plainText = () => quill.getText().replace(/\n+$/, "").trim();
 const wordCount = (s) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 function loadImage(src) {
@@ -82,8 +160,20 @@ async function resize(src, max, quality) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(img.naturalWidth * scale);
   canvas.height = Math.round(img.naturalHeight * scale);
-  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", quality);
+}
+
+function readFile(file, as = "dataURL") {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    as === "text" ? reader.readAsText(file) : reader.readAsDataURL(file);
+  });
 }
 
 /* ---------------- auth ---------------- */
@@ -111,6 +201,18 @@ $("#logoutBtn").addEventListener("click", async () => {
   location.replace("index.html");
 });
 
+/* ---------------- sidebar tabs ---------------- */
+function showPane(which) {
+  const features = which === "features";
+  $("#tabNotes").setAttribute("aria-selected", String(!features));
+  $("#tabFeatures").setAttribute("aria-selected", String(features));
+  $("#notesPane").classList.toggle("hidden", features);
+  $("#featuresPane").classList.toggle("hidden", !features);
+  $("#paneTitle").textContent = features ? "Features" : "Notes";
+}
+$("#tabNotes").addEventListener("click", () => showPane("notes"));
+$("#tabFeatures").addEventListener("click", () => showPane("features"));
+
 /* ---------------- list ---------------- */
 function sortedNotes() {
   const q = el.search.value.trim().toLowerCase();
@@ -128,7 +230,7 @@ function renderList() {
   if (!items.length) {
     const li = document.createElement("li");
     li.className = "list-empty mono-label";
-    li.textContent = total ? "No notes match your search." : "No notes yet. Tap “New note” or “Snap & scan” to begin.";
+    li.textContent = total ? "No notes match your search." : "No notes yet. Tap “New note”, “Snap & scan”, or open the Features tab.";
     el.list.append(li);
     return;
   }
@@ -176,20 +278,23 @@ function tag(text) {
 el.search.addEventListener("input", renderList);
 
 /* ---------------- notes CRUD ---------------- */
-function createNote(initial = {}) {
+function createNote(initial = {}, html = "") {
   const r = push(ref(db, notesPath()));
   const data = {
     title: "",
     body: "",
     pinned: false,
     hasImage: false,
+    paper: "plain",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ...initial,
   };
   // show it instantly; the realtime listener will replace it with the server copy
   notes[r.key] = { ...data, createdAt: Date.now(), updatedAt: Date.now() };
+  if (html) pendingHtml[r.key] = html;
   set(r, data).catch((err) => toast("Could not create note — " + err.message));
+  showPane("notes");
   renderList();
   openNote(r.key);
   return r.key;
@@ -200,15 +305,17 @@ function openNote(id) {
   const n = notes[id];
   if (!n) return;
   currentId = id;
+  closePopover();
 
   el.title.value = n.title || "";
-  el.body.value = n.body || "";
   el.empty.classList.add("hidden");
   el.app.classList.add("show-editor");
   setStatus("Saved");
-  renderMeta();
+  setPaper(n.paper || "plain");
   renderList();
   hideAttachment();
+  currentImage = null;
+  lastRange = { index: 0, length: 0 };
 
   if (isMobile() && !history.state?.note) history.pushState({ note: true }, "");
 
@@ -217,12 +324,47 @@ function openNote(id) {
       if (currentId === id && snap.exists()) showAttachment(snap.val().data);
     });
   }
+  contentReady = loadContent(id, n);
+  return contentReady;
+}
+
+// Load the rich content; older notes only have plain text in `body`.
+// Quill drops edits while disabled, so anything that inserts text awaits contentReady.
+async function loadContent(id, n) {
+  loadingContent = true;
+  quill.disable();
+  quill.setText("", "silent");
+  try {
+    const snap = await get(ref(db, contentPath(id)));
+    if (currentId !== id) return;
+    if (pendingHtml[id]) {
+      quill.setContents(quill.clipboard.convert({ html: pendingHtml[id] }), "silent");
+      delete pendingHtml[id];
+      loadingContent = false;
+      saveNow();
+    } else if (snap.exists()) {
+      quill.setContents(JSON.parse(snap.val().delta), "silent");
+    } else if (n.body) {
+      quill.setText(n.body + "\n", "silent");
+    }
+  } catch (err) {
+    toast("Could not load this note — " + err.message);
+  } finally {
+    if (currentId === id) {
+      loadingContent = false;
+      quill.enable();
+      quill.history.clear();
+      renderMeta();
+    }
+  }
 }
 
 function closeNote() {
   flushSave();
   currentId = null;
   currentImage = null;
+  closePopover();
+  quill.disable();
   el.empty.classList.remove("hidden");
   el.app.classList.remove("show-editor");
   renderList();
@@ -240,7 +382,7 @@ function renderMeta() {
   const n = notes[currentId];
   if (!n) return;
   el.metaDate.textContent = "Edited " + formatDate(n.updatedAt);
-  el.metaWords.textContent = `${wordCount(el.body.value)} words`;
+  el.metaWords.textContent = `${wordCount(plainText())} words`;
   el.pin.classList.toggle("is-on", !!n.pinned);
   el.pin.setAttribute("aria-pressed", String(!!n.pinned));
 }
@@ -249,29 +391,38 @@ function setStatus(text) { el.status.textContent = text; }
 
 function scheduleSave() {
   setStatus("Saving…");
-  el.metaWords.textContent = `${wordCount(el.body.value)} words`;
+  el.metaWords.textContent = `${wordCount(plainText())} words`;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 600);
+  saveTimer = setTimeout(saveNow, 700);
 }
 
 function saveNow() {
+  clearTimeout(saveTimer);
   saveTimer = null;
   const id = currentId;
-  if (!id || !notes[id]) return;
-  const changes = { title: el.title.value, body: el.body.value };
-  Object.assign(notes[id], changes);
-  update(ref(db, notePath(id)), { ...changes, updatedAt: serverTimestamp() })
+  if (!id || !notes[id] || loadingContent) return;
+  const title = el.title.value;
+  const body = plainText().slice(0, 20000);
+  Object.assign(notes[id], { title, body });
+  // one atomic write: list metadata + the rich content stored separately
+  update(ref(db, userPath()), {
+    [`notes/${id}/title`]: title,
+    [`notes/${id}/body`]: body,
+    [`notes/${id}/updatedAt`]: serverTimestamp(),
+    [`content/${id}`]: { delta: JSON.stringify(quill.getContents().ops) },
+  })
     .then(() => { if (currentId === id) setStatus("Saved"); })
     .catch((err) => { setStatus("Not saved"); toast("Save failed — " + err.message); });
 }
 
 function flushSave() {
-  if (saveTimer) { clearTimeout(saveTimer); saveNow(); }
+  if (saveTimer) saveNow();
 }
 
 el.title.addEventListener("input", scheduleSave);
-el.body.addEventListener("input", scheduleSave);
-el.title.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.body.focus(); } });
+el.title.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); quill.focus(); quill.setSelection(0, 0); }
+});
 document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
 window.addEventListener("beforeunload", flushSave);
 
@@ -289,14 +440,15 @@ el.pin.addEventListener("click", () => {
   toast(pinned ? "Pinned to top" : "Unpinned");
 });
 
-$("#copyBtn").addEventListener("click", async () => {
-  const text = [el.title.value, el.body.value].filter(Boolean).join("\n\n");
-  try {
-    await navigator.clipboard.writeText(text);
-    toast("Copied to clipboard");
-  } catch {
-    toast("Copy not allowed by this browser");
-  }
+function setPaper(paper) {
+  el.sheet.dataset.paper = paper;
+  el.paper.value = paper;
+}
+el.paper.addEventListener("change", () => {
+  if (!currentId) return;
+  setPaper(el.paper.value);
+  notes[currentId].paper = el.paper.value;
+  update(ref(db, notePath(currentId)), { paper: el.paper.value });
 });
 
 $("#deleteBtn").addEventListener("click", async () => {
@@ -307,7 +459,7 @@ $("#deleteBtn").addEventListener("click", async () => {
   saveTimer = null;
   leaveEditor();
   try {
-    await Promise.all([remove(ref(db, notePath(id))), remove(ref(db, imagePath(id)))]);
+    await update(ref(db, userPath()), { [`notes/${id}`]: null, [`images/${id}`]: null, [`content/${id}`]: null });
     toast("Note deleted");
   } catch (err) {
     toast("Delete failed — " + err.message);
@@ -318,6 +470,370 @@ el.empty.addEventListener("click", (e) => {
   const action = e.target.closest("[data-action]")?.dataset.action;
   if (action === "new") { createNote(); el.title.focus(); }
   if (action === "snap") openCamera("new");
+  if (action === "features") showPane("features");
+});
+
+/* ---------------- export menu ---------------- */
+const exportMenu = $("#exportMenu");
+$("#exportBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = exportMenu.classList.toggle("hidden") === false;
+  $("#exportBtn").setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".menu-wrap")) { exportMenu.classList.add("hidden"); $("#exportBtn").setAttribute("aria-expanded", "false"); }
+});
+exportMenu.addEventListener("click", async (e) => {
+  const kind = e.target.closest("[data-export]")?.dataset.export;
+  if (!kind || !currentId) return;
+  exportMenu.classList.add("hidden");
+  const payload = {
+    title: el.title.value,
+    html: quill.root.innerHTML,
+    text: plainText(),
+    date: formatDate(notes[currentId]?.updatedAt),
+  };
+  try {
+    if (kind === "copy") {
+      await navigator.clipboard.writeText([payload.title, payload.text].filter(Boolean).join("\n\n"));
+      toast("Copied to clipboard");
+    } else {
+      exportNote(kind, payload);
+      if (kind !== "pdf") toast("Downloaded");
+    }
+  } catch (err) {
+    toast(err.message || "Export failed");
+  }
+});
+
+/* ---------------- toolbar extras ---------------- */
+const popover = $("#popover");
+let popoverKind = null;
+
+function openPopover(kind, anchor) {
+  if (popoverKind === kind) return closePopover();
+  popoverKind = kind;
+  const sets = kind === "emoji" ? EMOJI : SYMBOLS;
+  const tabs = $("#popoverTabs");
+  tabs.replaceChildren();
+  const names = Object.keys(sets);
+  const show = (name) => {
+    tabs.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.set === name)));
+    const grid = $("#popoverGrid");
+    grid.replaceChildren();
+    grid.classList.toggle("popover__grid--symbols", kind !== "emoji");
+    for (const ch of sets[name].split(" ")) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = ch;
+      b.title = ch;
+      b.addEventListener("mousedown", (ev) => ev.preventDefault());
+      b.addEventListener("click", () => insertAtCaret(ch));
+      grid.append(b);
+    }
+  };
+  for (const name of names) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.set = name;
+    b.textContent = name;
+    b.addEventListener("mousedown", (ev) => ev.preventDefault());
+    b.addEventListener("click", () => show(name));
+    tabs.append(b);
+  }
+  show(names[0]);
+  popover.classList.remove("hidden");
+  const r = anchor.getBoundingClientRect();
+  const w = Math.min(340, window.innerWidth - 24);
+  popover.style.width = `${w}px`;
+  popover.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - w - 12))}px`;
+  popover.style.top = `${r.bottom + 8}px`;
+}
+function closePopover() {
+  popoverKind = null;
+  popover.classList.add("hidden");
+}
+document.addEventListener("mousedown", (e) => {
+  if (!popover.contains(e.target) && !e.target.closest('[data-cmd="emoji"], [data-cmd="symbol"]')) closePopover();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePopover(); });
+
+$("#toolbar").addEventListener("mousedown", (e) => {
+  // keep the caret in the note while clicking our own toolbar buttons
+  if (e.target.closest(".tb-btn")) e.preventDefault();
+});
+$("#toolbar").addEventListener("click", (e) => {
+  const btn = e.target.closest(".tb-btn");
+  if (!btn || !currentId) return;
+  const cmd = btn.dataset.cmd;
+  if (cmd === "undo") quill.history.undo();
+  if (cmd === "redo") quill.history.redo();
+  if (cmd === "emoji" || cmd === "symbol") openPopover(cmd, btn);
+  if (cmd === "date") insertAtCaret(new Date().toLocaleString("en-MY", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }));
+  if (cmd === "handwrite") openPad("write");
+  if (cmd === "draw") openPad("draw");
+  if (cmd === "voice") openVoice();
+});
+
+$("#imageInsertInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file || !currentId) return;
+  try {
+    insertImageAtCaret(await resize(await readFile(file), 1400, 0.82));
+  } catch {
+    toast("Could not add that picture");
+  }
+});
+
+/* ---------------- Features tab ---------------- */
+function ensureNote(title = "") {
+  if (currentId) return currentId;
+  return createNote({ title });
+}
+
+$("#featuresPane").addEventListener("click", async (e) => {
+  const tool = e.target.closest("[data-tool]")?.dataset.tool;
+  const template = e.target.closest("[data-template]")?.dataset.template;
+  if (template) {
+    const t = TEMPLATES[template];
+    createNote({ title: t.title }, t.html());
+    return;
+  }
+  switch (tool) {
+    case "blank": createNote(); if (!isMobile()) el.title.focus(); break;
+    case "snap": openCamera("new"); break;
+    case "upload": camTarget = "new"; el.fileInputGallery.click(); break;
+    case "handwrite": ensureNote("Handwritten note"); openPad("write"); break;
+    case "draw": ensureNote("Sketch"); openPad("draw"); break;
+    case "voice": ensureNote("Voice note"); openVoice(); break;
+    case "checklist": createNote({ title: TEMPLATES.checklist.title }, TEMPLATES.checklist.html()); break;
+    case "import": $("#importInput").click(); break;
+  }
+});
+
+$("#importInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const text = await readFile(file, "text");
+    const html = text.split(/\r?\n/).map((l) => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;") || "<br>"}</p>`).join("");
+    createNote({ title: file.name.replace(/\.(txt|md)$/i, "") }, html);
+    toast("Imported " + file.name);
+  } catch {
+    toast("Could not read that file");
+  }
+});
+
+/* ---------------- draw / handwrite pad ---------------- */
+const padModal = $("#padModal");
+const pad = createPad($("#padCanvas"), { onChange: () => $("#padHint").classList.toggle("hidden", !pad.isEmpty) });
+const DRAW_COLORS = ["#151515", "#5b5b57", "#8a1c1c", "#c2410c", "#a16207", "#3f6212", "#0f766e", "#1e3a8a", "#6d28d9", "#be185d"];
+let padLang = "en";
+let lastInsert = null;     // { at, length } of the last converted word, so a candidate can replace it
+
+const swatches = $("#swatches");
+DRAW_COLORS.forEach((c, i) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "swatch";
+  b.style.background = c;
+  b.setAttribute("aria-label", `Colour ${i + 1}`);
+  b.setAttribute("aria-pressed", String(i === 0));
+  b.addEventListener("click", () => {
+    pad.state.color = c;
+    pad.state.erase = false;
+    $("#eraserBtn").setAttribute("aria-pressed", "false");
+    $("#eraserBtn").classList.remove("is-on");
+    swatches.querySelectorAll(".swatch").forEach((s) => s.setAttribute("aria-pressed", String(s === b)));
+  });
+  swatches.append(b);
+});
+
+function selectIn(group, btn) {
+  group.querySelectorAll("[role=radio]").forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
+}
+$("#drawTools").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-size]");
+  if (b) { pad.state.size = Number(b.dataset.size); selectIn(b.parentElement, b); }
+});
+$("#writeTools").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lang]");
+  if (b) { padLang = b.dataset.lang; selectIn(b.parentElement, b); }
+});
+$("#eraserBtn").addEventListener("click", () => {
+  pad.state.erase = !pad.state.erase;
+  $("#eraserBtn").classList.toggle("is-on", pad.state.erase);
+  $("#eraserBtn").setAttribute("aria-pressed", String(pad.state.erase));
+});
+
+function setPadMode(mode) {
+  pad.state.mode = mode;
+  const write = mode === "write";
+  $("#padTabWrite").setAttribute("aria-selected", String(write));
+  $("#padTabDraw").setAttribute("aria-selected", String(!write));
+  $("#writeTools").classList.toggle("hidden", !write);
+  $("#drawTools").classList.toggle("hidden", write);
+  $("#padActionLabel").textContent = write ? "Convert to text" : "Add sketch to note";
+  $("#padHint").textContent = write ? "Write a word or a short line here, then tap ✓" : "Draw anything — it's added to your note as a picture";
+  $("#candidates").replaceChildren();
+  padModal.classList.toggle("is-draw", !write);
+  pad.clear();
+  lastInsert = null;
+}
+$("#padTabWrite").addEventListener("click", () => setPadMode("write"));
+$("#padTabDraw").addEventListener("click", () => setPadMode("draw"));
+
+function openPad(mode) {
+  if (!currentId) return;
+  closePopover();
+  padModal.classList.add("show");
+  setPadMode(mode);
+  requestAnimationFrame(() => pad.resize());
+}
+function closePad() { padModal.classList.remove("show"); }
+$("#padClose").addEventListener("click", closePad);
+$("#padUndo").addEventListener("click", () => pad.undo());
+$("#padClear").addEventListener("click", () => { pad.clear(); $("#candidates").replaceChildren(); });
+
+function showCandidates(list) {
+  const box = $("#candidates");
+  box.replaceChildren();
+  if (list.length < 2) return;
+  const label = document.createElement("span");
+  label.className = "mono-label";
+  label.textContent = "Not right? Pick:";
+  box.append(label);
+  for (const word of list.slice(1)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "candidate";
+    b.textContent = word;
+    b.addEventListener("click", () => {
+      if (!lastInsert) return;
+      quill.deleteText(lastInsert.at, lastInsert.length, "user");
+      quill.insertText(lastInsert.at, word + " ", "user");
+      lastInsert = { at: lastInsert.at, length: word.length + 1 };
+      quill.setSelection(lastInsert.at + lastInsert.length, 0, "silent");
+      lastRange = { index: lastInsert.at + lastInsert.length, length: 0 };
+      box.replaceChildren();
+      toast(`Changed to “${word}”`);
+    });
+    box.append(b);
+  }
+}
+
+$("#padAction").addEventListener("click", async () => {
+  if (pad.isEmpty) return toast(pad.state.mode === "write" ? "Write something first" : "Draw something first");
+  const btn = $("#padAction");
+  if (pad.state.mode === "draw") {
+    insertImageAtCaret(pad.toImage());
+    toast("Sketch added to your note");
+    closePad();
+    return;
+  }
+  btn.disabled = true;
+  $("#padActionLabel").textContent = "Reading…";
+  try {
+    const candidates = await recognizeInk(pad.ink(), pad.size(), padLang);
+    const word = candidates[0];
+    const at = insertAtCaret(word + " ");
+    lastInsert = { at, length: word.length + 1 };
+    showCandidates(candidates);
+    pad.clear();
+    toast(`Added “${word}”`);
+  } catch (err) {
+    toast(err.message.includes("fetch") ? "No connection to the handwriting service" : err.message);
+  } finally {
+    btn.disabled = false;
+    $("#padActionLabel").textContent = "Convert to text";
+  }
+});
+
+/* ---------------- voice to text ---------------- */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const voiceModal = $("#voiceModal");
+let recognizer = null;
+let voiceLang = "en-US";
+let voiceFinal = "";
+
+function openVoice() {
+  if (!currentId) return;
+  if (!SpeechRecognition) return toast("Voice typing needs Chrome, Edge or Safari", 3500);
+  voiceFinal = "";
+  $("#voiceText").value = "";
+  $("#voiceInsert").disabled = true;
+  $("#voiceStatus").textContent = "Tap the mic and start talking";
+  voiceModal.classList.add("show");
+}
+function stopVoice() {
+  recognizer?.stop();
+}
+function closeVoice() {
+  stopVoice();
+  voiceModal.classList.remove("show");
+}
+$("#voiceClose").addEventListener("click", closeVoice);
+$("#voiceLang").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lang]");
+  if (!b) return;
+  voiceLang = b.dataset.lang;
+  selectIn(b.parentElement, b);
+  if (recognizer) { stopVoice(); }
+});
+$("#voiceText").addEventListener("input", () => {
+  voiceFinal = $("#voiceText").value;
+  $("#voiceInsert").disabled = !voiceFinal.trim();
+});
+
+$("#micBtn").addEventListener("click", () => {
+  if (recognizer) return stopVoice();
+  recognizer = new SpeechRecognition();
+  recognizer.lang = voiceLang;
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
+  const base = $("#voiceText").value ? $("#voiceText").value.trimEnd() + " " : "";
+  voiceFinal = base;
+  recognizer.onresult = (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) voiceFinal += r[0].transcript.trim() + " ";
+      else interim += r[0].transcript;
+    }
+    $("#voiceText").value = voiceFinal + interim;
+    $("#voiceInsert").disabled = !$("#voiceText").value.trim();
+  };
+  recognizer.onerror = (ev) => {
+    $("#voiceStatus").textContent = ev.error === "not-allowed" ? "Microphone blocked — allow it in the address bar" : "Didn't catch that — tap the mic to try again";
+  };
+  recognizer.onend = () => {
+    recognizer = null;
+    $("#micBtn").classList.remove("is-live");
+    $("#micBtn").setAttribute("aria-pressed", "false");
+    if (!$("#voiceStatus").textContent.startsWith("Microphone")) $("#voiceStatus").textContent = "Paused — tap the mic to continue";
+  };
+  recognizer.start();
+  $("#micBtn").classList.add("is-live");
+  $("#micBtn").setAttribute("aria-pressed", "true");
+  $("#voiceStatus").textContent = "Listening… tap again to stop";
+});
+
+$("#voiceInsert").addEventListener("click", () => {
+  const text = $("#voiceText").value.trim();
+  if (!text || !currentId) return;
+  const at = caret();
+  const prefix = at > 0 && !/\s$/.test(quill.getText(at - 1, 1)) ? " " : "";
+  insertAtCaret(prefix + text + " ");
+  toast("Added to your note");
+  closeVoice();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (padModal.classList.contains("show")) closePad();
+  if (voiceModal.classList.contains("show")) closeVoice();
 });
 
 /* ---------------- attachments ---------------- */
@@ -336,6 +852,7 @@ async function handleCapture(dataUrl) {
     ? createNote({ title: "Scan — " + new Date().toLocaleDateString("en-MY", { day: "numeric", month: "short" }) })
     : currentId;
   if (id !== currentId) openNote(id);
+  await contentReady;
 
   try {
     const stored = await resize(dataUrl, 1280, 0.72);
@@ -355,15 +872,15 @@ $("#removeImgBtn").addEventListener("click", async () => {
   const id = currentId;
   hideAttachment();
   currentImage = null;
-  await remove(ref(db, imagePath(id)));
-  await update(ref(db, notePath(id)), { hasImage: false });
+  await update(ref(db, userPath()), { [`images/${id}`]: null, [`notes/${id}/hasImage`]: false });
   toast("Photo removed");
 });
 
 /* ---------------- OCR (Tesseract.js, English + Malay) ---------------- */
+let ocrStage = "";
 function ocrProgress(m) {
   if (m.status === "recognizing text") {
-    el.ocrLabel.textContent = `Reading text… ${Math.round(m.progress * 100)}%`;
+    el.ocrLabel.textContent = `${ocrStage} ${Math.round(m.progress * 100)}%`;
     el.ocrFill.style.width = `${m.progress * 100}%`;
   } else {
     el.ocrLabel.textContent = "Loading OCR engine (first time takes a moment)…";
@@ -375,6 +892,7 @@ async function getWorker() {
   if (ocrWorker) return ocrWorker;
   if (!window.Tesseract) throw new Error("OCR engine failed to load — check your connection.");
   ocrWorker = await Tesseract.createWorker(["eng", "msa"], 1, { logger: ocrProgress });
+  await ocrWorker.setParameters({ preserve_interword_spaces: "1", user_defined_dpi: "300" });
   return ocrWorker;
 }
 
@@ -385,27 +903,45 @@ async function runOCR() {
   if (!src) return;
 
   ocrBusy = true;
+  await contentReady;
   el.ocrBtn.disabled = true;
   el.ocrFill.style.width = "0%";
-  el.ocrLabel.textContent = "Preparing image…";
+  el.ocrLabel.textContent = "Cleaning up the photo…";
   el.ocrProgress.classList.add("show");
 
   try {
     const worker = await getWorker();
-    const input = await resize(src, 2000, 0.92);
-    const { data } = await worker.recognize(input);
-    const text = data.text.replace(/\n{3,}/g, "\n\n").trim();
+    const { gray, binary } = await prepareForOcr(src);
+    // Try the shadow-free version first; if it's unsure, also try the softer grayscale one
+    ocrStage = "Reading text…";
+    let best = (await worker.recognize(binary)).data;
+    if (best.confidence < 70) {
+      ocrStage = "Double-checking…";
+      const second = (await worker.recognize(gray)).data;
+      if (second.confidence > best.confidence) best = second;
+    }
+    const text = cleanOcrText(best.text);
+    const shaky = best.confidence < 45;
 
     if (!text) {
-      toast("No readable text found — try a sharper, closer photo");
+      toast("No readable text found — try a sharper, closer photo in good light", 3500);
     } else if (currentId === id) {
-      el.body.value = el.body.value.trim() ? `${el.body.value.trimEnd()}\n\n${text}` : text;
-      saveNow();
+      const end = quill.getLength() - 1;
+      quill.insertText(end, (plainText() ? "\n" : "") + text + "\n", "user");
       update(ref(db, notePath(id)), { ocr: true });
-      toast("Text added to your note");
+      toast(shaky ? "Text added — some words may be wrong, please check" : "Text added to your note", 3500);
     } else {
-      const body = notes[id]?.body?.trim() ? `${notes[id].body.trimEnd()}\n\n${text}` : text;
-      update(ref(db, notePath(id)), { body, ocr: true, updatedAt: serverTimestamp() });
+      // the user moved to another note while OCR ran: append to the scanned note directly
+      const snap = await get(ref(db, contentPath(id)));
+      const ops = snap.exists() ? JSON.parse(snap.val().delta) : [{ insert: (notes[id]?.body || "") + "\n" }];
+      ops.push({ insert: "\n" + text + "\n" });
+      const body = ((notes[id]?.body || "") + "\n" + text).trim().slice(0, 20000);
+      await update(ref(db, userPath()), {
+        [`content/${id}`]: { delta: JSON.stringify(ops) },
+        [`notes/${id}/body`]: body,
+        [`notes/${id}/ocr`]: true,
+        [`notes/${id}/updatedAt`]: serverTimestamp(),
+      });
       toast("Text added to your scanned note");
     }
   } catch (err) {
@@ -484,14 +1020,12 @@ $("#camUpload").addEventListener("click", () => {
   el.fileInputGallery.click();
 });
 
-function onFilePicked(e) {
+async function onFilePicked(e) {
   const file = e.target.files[0];
   e.target.value = "";
   if (!file) return;
   if (!file.type.startsWith("image/")) return toast("Please choose an image file");
-  const reader = new FileReader();
-  reader.onload = () => handleCapture(reader.result);
-  reader.readAsDataURL(file);
+  handleCapture(await readFile(file));
 }
 el.fileInput.addEventListener("change", onFilePicked);
 el.fileInputGallery.addEventListener("change", onFilePicked);

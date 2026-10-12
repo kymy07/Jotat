@@ -8,10 +8,13 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@500;700&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/editor.css">
   <script src="js/version.js"></script>
   <script src="js/motion.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 </head>
 <body class="app-body">
@@ -29,29 +32,88 @@
   </header>
 
   <div class="app" id="app">
-    <!-- LIST -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar__head">
         <div class="sidebar__title">
-          <h1>Notes</h1>
-          <span class="mono-label"><span id="noteCount">0 notes</span> · <span data-version>v1.0.0</span></span>
+          <h1 id="paneTitle">Notes</h1>
+          <span class="mono-label"><span id="noteCount">0 notes</span> · <span data-version>v1.1.0</span></span>
         </div>
-        <label class="search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input type="search" id="searchInput" placeholder="Search notes…" aria-label="Search notes">
-        </label>
-        <div class="sidebar__actions">
-          <button class="pill pill--dark" id="newBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke="currentColor"/></svg>
-            New note
-          </button>
-          <button class="pill pill--glass" id="snapBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
-            Snap &amp; scan
-          </button>
+        <div class="tabs tabs--sm" role="tablist" aria-label="Sidebar">
+          <button role="tab" id="tabNotes" aria-selected="true" aria-controls="notesPane">Notes</button>
+          <button role="tab" id="tabFeatures" aria-selected="false" aria-controls="featuresPane">Features</button>
         </div>
       </div>
-      <ul class="note-list" id="noteList"></ul>
+
+      <div class="pane" id="notesPane" role="tabpanel">
+        <div class="pane__head">
+          <label class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" id="searchInput" placeholder="Search notes…" aria-label="Search notes">
+          </label>
+          <div class="sidebar__actions">
+            <button class="pill pill--dark" id="newBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke="currentColor"/></svg>
+              New note
+            </button>
+            <button class="pill pill--glass" id="snapBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Snap &amp; scan
+            </button>
+          </div>
+        </div>
+        <ul class="note-list" id="noteList"></ul>
+      </div>
+
+      <div class="pane hidden" id="featuresPane" role="tabpanel">
+        <div class="tool-scroll">
+          <p class="mono-label tool-heading">Add a note</p>
+          <div class="tool-grid">
+            <button class="tool" data-tool="blank">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6z"/><path d="M12 10v6M9 13h6"/></svg></span>
+              <b>Blank note</b><small>Start writing from scratch</small>
+            </button>
+            <button class="tool" data-tool="snap">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+              <b>Snap &amp; scan</b><small>Camera → text (OCR)</small>
+            </button>
+            <button class="tool" data-tool="upload">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg></span>
+              <b>Photo to text</b><small>Read text from an image</small>
+            </button>
+            <button class="tool" data-tool="handwrite">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20c3-1 4-6 7-6s2 4 5 4 3-3 4-5"/><path d="M15 4l5 5-8 8H7v-5z"/></svg></span>
+              <b>Handwrite</b><small>Write with finger → text ✓</small>
+            </button>
+            <button class="tool" data-tool="draw">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19l7-7 3 3-7 7z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><circle cx="11" cy="11" r="2"/></svg></span>
+              <b>Sketch</b><small>Draw and add to a note</small>
+            </button>
+            <button class="tool" data-tool="voice">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span>
+              <b>Voice note</b><small>Speak → text (EN / BM)</small>
+            </button>
+            <button class="tool" data-tool="checklist">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="M4.5 7l1 1 2-2M12 7h9M12 17h9"/><rect x="3" y="14" width="6" height="6" rx="1.5"/></svg></span>
+              <b>Checklist</b><small>To-dos you can tick</small>
+            </button>
+            <button class="tool" data-tool="import">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg></span>
+              <b>Import file</b><small>.txt or .md into a note</small>
+            </button>
+          </div>
+
+          <p class="mono-label tool-heading">Templates</p>
+          <div class="template-list">
+            <button class="template" data-template="meeting"><span>📋</span><b>Meeting notes</b><small>Agenda, discussion, action items</small></button>
+            <button class="template" data-template="class"><span>🎓</span><b>Class / lecture</b><small>Topic, key points, summary</small></button>
+            <button class="template" data-template="journal"><span>📔</span><b>Daily journal</b><small>Mood, gratitude, highlights</small></button>
+            <button class="template" data-template="project"><span>🚀</span><b>Project plan</b><small>Goal, milestones, tasks</small></button>
+            <button class="template" data-template="shopping"><span>🛒</span><b>Shopping list</b><small>Tick items as you buy</small></button>
+            <button class="template" data-template="recipe"><span>🍳</span><b>Recipe</b><small>Ingredients and steps</small></button>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <!-- EDITOR -->
@@ -64,24 +126,122 @@
           <span class="mono-label" id="saveStatus">Saved</span>
         </div>
         <div class="group">
+          <label class="paper-select" title="Paper style">
+            <span class="mono-label">Paper</span>
+            <select id="paperSelect" aria-label="Paper style">
+              <option value="plain">Plain</option>
+              <option value="lined">Lined</option>
+              <option value="grid">Grid</option>
+              <option value="dots">Dots</option>
+            </select>
+          </label>
           <button class="icon-btn" id="pinBtn" aria-label="Pin note" title="Pin">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.5l2.6 6.1 6.4.5-4.9 4.2 1.5 6.4L12 16.3l-5.6 3.4 1.5-6.4L3 9.1l6.4-.5z"/></svg>
           </button>
-          <button class="icon-btn" id="copyBtn" aria-label="Copy text" title="Copy text">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></svg>
-          </button>
-          <button class="pill pill--glass" id="attachBtn" title="Add photo">
+          <button class="icon-btn" id="attachBtn" aria-label="Snap a photo into this note" title="Snap &amp; scan into this note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
-            <span>Photo</span>
           </button>
+          <div class="menu-wrap">
+            <button class="icon-btn" id="exportBtn" aria-label="Export or copy" title="Export" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>
+            </button>
+            <div class="menu hidden" id="exportMenu" role="menu">
+              <button role="menuitem" data-export="doc">Word document (.doc)</button>
+              <button role="menuitem" data-export="pdf">Print / save as PDF</button>
+              <button role="menuitem" data-export="txt">Plain text (.txt)</button>
+              <button role="menuitem" data-export="copy">Copy text</button>
+            </div>
+          </div>
           <button class="icon-btn" id="deleteBtn" aria-label="Delete note" title="Delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
           </button>
         </div>
       </div>
 
+      <!-- formatting toolbar (Quill) -->
+      <div id="toolbar" class="toolbar">
+        <span class="ql-formats">
+          <button type="button" class="tb-btn" data-cmd="undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+          <button type="button" class="tb-btn" data-cmd="redo" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-header" title="Text style">
+            <option value="1">Title</option>
+            <option value="2">Heading</option>
+            <option value="3">Subheading</option>
+            <option selected>Normal</option>
+          </select>
+          <select class="ql-font" title="Font">
+            <option selected>Sans</option>
+            <option value="serif">Serif</option>
+            <option value="elegant">Elegant</option>
+            <option value="display">Display</option>
+            <option value="hand">Handwriting</option>
+            <option value="mono">Mono</option>
+          </select>
+          <select class="ql-size" title="Size">
+            <option value="12px">12</option>
+            <option value="14px">14</option>
+            <option selected>16</option>
+            <option value="20px">20</option>
+            <option value="24px">24</option>
+            <option value="32px">32</option>
+            <option value="48px">48</option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-bold" title="Bold (Ctrl+B)"></button>
+          <button class="ql-italic" title="Italic (Ctrl+I)"></button>
+          <button class="ql-underline" title="Underline (Ctrl+U)"></button>
+          <button class="ql-strike" title="Strikethrough"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-color" title="Text colour">
+            <option selected></option>
+            <option value="#5b5b57"></option><option value="#8a1c1c"></option><option value="#c2410c"></option>
+            <option value="#a16207"></option><option value="#3f6212"></option><option value="#0f766e"></option>
+            <option value="#1e3a8a"></option><option value="#6d28d9"></option><option value="#be185d"></option>
+          </select>
+          <select class="ql-background" title="Highlight">
+            <option selected></option>
+            <option value="#fff3a3"></option><option value="#ffe0b2"></option><option value="#fde2e4"></option>
+            <option value="#ede9fe"></option><option value="#dbeafe"></option><option value="#dcfce7"></option>
+            <option value="#e7e7df"></option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-align" title="Align">
+            <option selected></option>
+            <option value="center"></option>
+            <option value="right"></option>
+            <option value="justify"></option>
+          </select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-list" value="check" title="Checklist (tick)"></button>
+          <button class="ql-list" value="bullet" title="Bullet list"></button>
+          <button class="ql-list" value="ordered" title="Numbered list"></button>
+          <button class="ql-indent" value="-1" title="Outdent"></button>
+          <button class="ql-indent" value="+1" title="Indent"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-blockquote" title="Quote"></button>
+          <button class="ql-link" title="Link"></button>
+          <button class="ql-image" title="Insert picture"></button>
+        </span>
+        <span class="ql-formats">
+          <button type="button" class="tb-btn tb-btn--emoji" data-cmd="emoji" title="Emoji">😊</button>
+          <button type="button" class="tb-btn" data-cmd="symbol" title="Symbols"><span class="tb-glyph">Ω</span></button>
+          <button type="button" class="tb-btn" data-cmd="date" title="Insert date &amp; time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
+          <button type="button" class="tb-btn" data-cmd="handwrite" title="Handwrite → text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20c3-1 4-6 7-6s2 4 5 4 3-3 4-5"/><path d="M15 4l5 5-8 8H7v-5z"/></svg></button>
+          <button type="button" class="tb-btn" data-cmd="draw" title="Sketch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19l7-7 3 3-7 7z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><circle cx="11" cy="11" r="2"/></svg></button>
+          <button type="button" class="tb-btn" data-cmd="voice" title="Voice to text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></button>
+          <button class="ql-clean" title="Clear formatting"></button>
+        </span>
+      </div>
+
       <div class="editor__scroll">
-        <div class="editor__inner">
+        <article class="sheet" id="sheet">
           <input class="title-input" id="titleInput" placeholder="Untitled" maxlength="140" aria-label="Note title">
           <div class="meta-line mono-label">
             <span id="metaDate">—</span>
@@ -93,11 +253,11 @@
             <div class="attachment__bar">
               <span class="mono-label">( Attached photo )</span>
               <div class="group" style="display:flex;gap:8px">
-                <button class="pill pill--dark" id="ocrBtn">
+                <button class="pill pill--dark pill--sm" id="ocrBtn">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M8 10h8M8 14h5" stroke="currentColor"/></svg>
                   Read text
                 </button>
-                <button class="pill pill--glass" id="removeImgBtn">Remove</button>
+                <button class="pill pill--glass pill--sm" id="removeImgBtn">Remove</button>
               </div>
             </div>
             <div class="ocr-progress" id="ocrProgress">
@@ -106,8 +266,8 @@
             </div>
           </div>
 
-          <textarea class="body-input" id="bodyInput" placeholder="Start writing… or snap a photo and let Jotat read it for you." aria-label="Note body"></textarea>
-        </div>
+          <div id="quill" class="note-body"></div>
+        </article>
       </div>
 
       <div class="empty-state" id="emptyState">
@@ -115,15 +275,22 @@
         <div class="actions">
           <button class="pill pill--dark" data-action="new">New note</button>
           <button class="pill pill--glass" data-action="snap">Snap &amp; scan</button>
+          <button class="pill pill--glass" data-action="features">Browse features</button>
         </div>
       </div>
     </section>
   </div>
 
+  <!-- POPOVER (emoji / symbols) -->
+  <div class="popover hidden" id="popover" role="dialog" aria-label="Insert">
+    <div class="popover__tabs" id="popoverTabs"></div>
+    <div class="popover__grid" id="popoverGrid"></div>
+  </div>
+
   <!-- CAMERA -->
   <div class="modal" id="camModal" role="dialog" aria-modal="true" aria-label="Camera">
     <div class="modal__top">
-      <span class="mono-label">( Point at text · hold steady )</span>
+      <span class="mono-label">( Point at text · hold steady · good light )</span>
       <button class="icon-btn" id="camClose" aria-label="Close camera">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor"/></svg>
       </button>
@@ -145,8 +312,86 @@
     </div>
   </div>
 
+  <!-- DRAW / HANDWRITE PAD -->
+  <div class="sheet-modal" id="padModal" role="dialog" aria-modal="true" aria-labelledby="padTitle">
+    <div class="sheet-modal__card">
+      <div class="sheet-modal__head">
+        <div class="tabs tabs--sm pad-tabs" role="tablist">
+          <button role="tab" id="padTabWrite" aria-selected="true">Handwrite → text</button>
+          <button role="tab" id="padTabDraw" aria-selected="false">Sketch</button>
+        </div>
+        <h2 class="visually-hidden" id="padTitle">Pad</h2>
+        <button class="icon-btn" id="padClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="pad-tools">
+        <div class="pad-tools__group" id="writeTools">
+          <span class="mono-label">Language</span>
+          <div class="tabs tabs--xs" role="radiogroup" aria-label="Handwriting language">
+            <button role="radio" data-lang="en" aria-selected="true">EN</button>
+            <button role="radio" data-lang="ms" aria-selected="false">BM</button>
+          </div>
+        </div>
+        <div class="pad-tools__group hidden" id="drawTools">
+          <div class="swatches" id="swatches"></div>
+          <div class="tabs tabs--xs" role="radiogroup" aria-label="Brush size">
+            <button role="radio" data-size="2" aria-selected="false">S</button>
+            <button role="radio" data-size="4" aria-selected="true">M</button>
+            <button role="radio" data-size="9" aria-selected="false">L</button>
+          </div>
+          <button class="icon-btn icon-btn--sm" id="eraserBtn" title="Eraser" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 20H9L3.5 14.5a2 2 0 010-2.8l8.2-8.2a2 2 0 012.8 0l5 5a2 2 0 010 2.8L13 18"/></svg>
+          </button>
+        </div>
+        <div class="pad-tools__group">
+          <button class="icon-btn icon-btn--sm" id="padUndo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+          <button class="pill pill--glass pill--sm" id="padClear">Clear</button>
+        </div>
+      </div>
+
+      <div class="pad-stage">
+        <canvas id="padCanvas" aria-label="Writing area"></canvas>
+        <p class="pad-hint mono-label" id="padHint">Write a word or a short line here, then tap ✓</p>
+      </div>
+
+      <div class="pad-foot">
+        <div class="candidates" id="candidates" aria-live="polite"></div>
+        <button class="pill pill--dark pill--lg" id="padAction">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          <span id="padActionLabel">Convert to text</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE -->
+  <div class="sheet-modal" id="voiceModal" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
+    <div class="sheet-modal__card sheet-modal__card--narrow">
+      <div class="sheet-modal__head">
+        <h2 class="sheet-title" id="voiceTitle">Voice note</h2>
+        <button class="icon-btn" id="voiceClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="tabs tabs--sm" role="radiogroup" aria-label="Voice language" id="voiceLang">
+        <button role="radio" data-lang="en-US" aria-selected="true">English</button>
+        <button role="radio" data-lang="ms-MY" aria-selected="false">Bahasa Melayu</button>
+      </div>
+      <button class="mic" id="micBtn" aria-pressed="false" aria-label="Start listening">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+      </button>
+      <p class="mono-label voice-status" id="voiceStatus">Tap the mic and start talking</p>
+      <textarea class="voice-text" id="voiceText" placeholder="Your words will appear here…" aria-label="Transcript"></textarea>
+      <button class="pill pill--dark btn-block" id="voiceInsert" disabled>Add to note</button>
+    </div>
+  </div>
+
   <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
   <input type="file" id="fileInputGallery" accept="image/*" hidden>
+  <input type="file" id="imageInsertInput" accept="image/*" hidden>
+  <input type="file" id="importInput" accept=".txt,.md,text/plain,text/markdown" hidden>
   <div class="toast" id="toast"></div>
 
   <script type="module" src="js/app.js"></script>

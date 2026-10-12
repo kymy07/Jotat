@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://jotat.netlify.app/
 
-Current version: **1.0.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface with Apple-style frosted
 glass**: oversized condensed headlines, a single ink colour for all text, glass
@@ -23,7 +23,10 @@ searchable notes.
 - **Vanilla HTML/CSS/JS** — no build step, no bundler, no framework
 - **Firebase Authentication 10.14** — Google sign-in, email / password sign-up, log-in, reset
 - **Firebase Realtime Database 10.14** — per-user notes and photos, live sync
-- **Tesseract.js 5.1** — in-browser OCR, `eng` + `msa` language data
+- **Quill 2.0** — rich-text editor (fonts, sizes, colours, align, lists, checklists, images)
+- **Tesseract.js 5.1** — in-browser OCR, `eng` + `msa` language data, with photo clean-up
+- **Google Input Tools handwriting** — free, keyless stroke recognition for *Handwrite → text*
+- **Web Speech API** — voice to text (English / Bahasa Melayu) in Chrome, Edge and Safari
 - **MediaDevices `getUserMedia`** — live camera with front / back flip
 - **Google Fonts** — Inter Tight (headlines + UI), Instrument Serif (logo), Caveat (hero notes)
 
@@ -38,13 +41,16 @@ our own and no API besides Firebase.
 Jotat/
 ├── index.html               # landing page (hero, features, call to action)
 ├── auth.html                # log in / sign up (tabs, ?mode=signup opens sign-up)
-├── app.html                 # the notes app (list, editor, camera modal)
-├── css/style.css            # all styles — tokens, landing, auth, app, responsive
+├── app.html                 # the notes app (list, Features tab, editor, camera / pad / voice)
+├── css/style.css            # shared styles — tokens, glass, landing, auth, app layout
+├── css/editor.css           # notes app only — toolbar, note sheet, Features tab, pad, voice
 ├── js/
 │   ├── firebase-config.js   # Firebase web config (apiKey / appId injected at deploy)
 │   ├── firebase.js          # initialises Firebase, exports auth + db
 │   ├── auth.js              # Google sign-in, email sign-up / log-in, password reset
-│   ├── app.js               # notes CRUD, autosave, search, camera, OCR
+│   ├── app.js               # notes CRUD, editor, autosave, Features tab, camera, OCR, voice
+│   ├── tools.js             # emoji / symbols, templates, draw pad, handwriting, OCR clean-up, export
+│   ├── motion.js            # reveal, tilt and press-ripple effects
 │   └── version.js           # app version shown in the UI (v1.0.0)
 ├── assets/favicon.svg       # brand mark (four-point spark)
 ├── database.rules.json      # Realtime Database security rules
@@ -117,25 +123,31 @@ warning bar at the top.
 |---|--------------------|--------------------------|-------------------------------------------------------------------|
 | 1 | Sign up / log in   | `auth.js`                | Continue with Google, or email + password with *Remember me* and reset by email |
 | 2 | Notes list         | `renderList()`           | Pinned first, then newest; tags for *Pinned*, *Photo*, *Scanned*   |
-| 3 | Editor + autosave  | `scheduleSave()`         | Saves 600 ms after you stop typing — no save button               |
-| 4 | Search             | `#searchInput`           | Live filter across titles and note text                           |
-| 5 | Pin / copy / delete| `#pinBtn`, `#copyBtn`    | Pin to top, copy note to clipboard, delete with confirmation      |
-| 6 | Snap & scan        | `openCamera()`           | In-app camera (flip front / back) or upload; creates a new note   |
-| 7 | Photo attachment   | `handleCapture()`        | Attach a photo to the open note; stored compressed (~100–200 KB)   |
-| 8 | OCR                | `runOCR()`               | Reads printed text (English + Malay) and appends it to the note   |
-| 9 | Live sync          | `onValue()`              | Edits show up on every signed-in device in real time              |
-| 10| Mobile layout      | `@media (max-width:760px)` | List ↔ full-screen editor, floating actions, phone back gesture  |
+| 3 | Rich editor        | `#toolbar` (Quill)       | Bold, italic, underline, strike; 6 fonts, sizes, text colour, highlight; align; bullet, numbered and **tick** lists; headings, quote, link, picture |
+| 4 | Emoji & symbols    | `openPopover()`          | Emoji by category; ticks, arrows, maths, currency (incl. RM) and punctuation |
+| 5 | Handwrite → text   | `openPad("write")`       | Write with finger / mouse, tap **✓** — the word is typed into the note; tap an alternative if it guessed wrong (EN / BM) |
+| 6 | Sketch             | `openPad("draw")`        | Colours, brush sizes, eraser, undo; added to the note as a picture |
+| 7 | Voice note         | `openVoice()`            | Speak in English or Bahasa Melayu; edit the transcript, then add it |
+| 8 | Snap & scan + OCR  | `openCamera()`, `runOCR()` | Camera or upload; photo is cleaned (contrast, shadow removal, upscaling) and read in English + Malay |
+| 9 | Features tab       | `#featuresPane`          | One place for every way to add a note, plus templates: meeting, class, journal, project, shopping, recipe |
+| 10| Paper styles       | `#paperSelect`           | Plain, lined, grid or dotted page per note |
+| 11| Export             | `exportNote()`           | Word (.doc), print / save as PDF, plain text, copy |
+| 12| Autosave & sync    | `scheduleSave()`, `onValue()` | Saves 0.7 s after you stop typing; live on every signed-in device |
+| 13| Mobile layout      | `@media (max-width:760px)` | List ↔ full-screen editor, swipeable toolbar, bottom-sheet pads |
 
 ### Data layout
 
 ```
 users/{uid}/profile        name, email, createdAt
-users/{uid}/notes/{id}     title, body, pinned, hasImage, ocr, createdAt, updatedAt
+users/{uid}/notes/{id}     title, body (plain text for list + search), pinned, paper, hasImage, ocr, createdAt, updatedAt
+users/{uid}/content/{id}   delta  (the formatted note as a Quill Delta, JSON string; sketches embedded)
 users/{uid}/images/{id}    data   (compressed JPEG data URL)
 ```
 
-Photos are kept apart from notes so the list loads without pulling every image;
-an image is fetched only when its note is opened. Storing them in the Realtime
+Photos and formatted content are kept apart from the note list so the list
+loads without pulling every image or sketch; they are fetched only when a note
+is opened. Notes created before the rich editor have no `content` entry and open
+from their plain `body`. Storing them in the Realtime
 Database means no Cloud Storage bucket — the project stays on the free
 **Spark** plan.
 
@@ -243,8 +255,13 @@ sign-in header and the notes list.
   phone's file / camera picker.
 - **First OCR run is slow.** Tesseract downloads its English and Malay language
   data (~10–20 MB) once; the browser caches it after that.
-- **OCR reads print, not handwriting.** Clear, well-lit, close-up photos of
-  printed text work best; handwriting is unreliable.
+- **Handwriting in photos is best-effort.** Photo OCR (Tesseract) handles print
+  and neat handwriting after clean-up, but messy or cursive handwriting will have
+  mistakes. For handwriting, *Handwrite → text* (writing on the pad) is far more
+  accurate because it reads pen strokes, not pixels.
+- **Handwrite → text uses an unofficial Google endpoint.** It is free and needs
+  no key, but Google could change or limit it without notice.
+- **Voice typing** needs Chrome, Edge or Safari (Firefox has no Web Speech API).
 - **Photos live in the Realtime Database.** They are resized to 1280 px JPEG to
   stay small, but thousands of photos will grow the database — move them to
   Cloud Storage if that happens.
@@ -261,6 +278,8 @@ sign-in header and the notes list.
 
 - Auth & database — [Firebase](https://firebase.google.com/) by Google
 - OCR engine — [Tesseract.js](https://tesseract.projectnaptha.com/)
+- Editor — [Quill](https://quilljs.com/)
+- Handwriting recognition — Google Input Tools
 - Typefaces — [Inter Tight](https://fonts.google.com/specimen/Inter+Tight),
   [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif),
   [Caveat](https://fonts.google.com/specimen/Caveat) via Google Fonts
