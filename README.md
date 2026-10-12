@@ -175,7 +175,10 @@ runs when a tag like `v1.0.0` is pushed (or manually: *Actions → Deploy to Git
 Ordinary pushes to `main` do **not** deploy — only a version tag does, so what
 is live always matches a numbered release.
 
-Pages must be set to **Settings → Pages → Source: GitHub Actions**. Each run's
+Pages must be set to **Settings → Pages → Source: GitHub Actions**, and the
+`github-pages` environment must allow tags matching `v*.*.*`
+(**Settings → Environments → github-pages → Deployment branches and tags**) —
+by default it only accepts `main`, which blocks tag deploys. Each run's
 log and the deployed URL are visible under the repository's **Actions** tab;
 every release is listed under **Releases**.
 
