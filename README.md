@@ -9,7 +9,7 @@ with a vintage-editorial palette
 
 Live demo: https://jotat.netlify.app/
 
-Current version: **1.1.0** — see [CHANGELOG.md](CHANGELOG.md).
+Current version: **1.2.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 Designed as an **editorial / vintage-print interface with Apple-style frosted
 glass**: oversized condensed headlines, a single ink colour for all text, glass
@@ -23,7 +23,8 @@ searchable notes.
 - **Vanilla HTML/CSS/JS** — no build step, no bundler, no framework
 - **Firebase Authentication 10.14** — Google sign-in, email / password sign-up, log-in, reset
 - **Firebase Realtime Database 10.14** — per-user notes and photos, live sync
-- **Quill 2.0** — rich-text editor (fonts, sizes, colours, align, lists, checklists, images)
+- **Quill 2.0** — rich-text editor (fonts, sizes, colours, align, lists, checklists, images, code blocks)
+- **highlight.js 11.9** — syntax colours and language auto-detect for code blocks
 - **Tesseract.js 5.1** — in-browser OCR, `eng` + `msa` language data, with photo clean-up
 - **Google Input Tools handwriting** — free, keyless stroke recognition for *Handwrite → text*
 - **Web Speech API** — voice to text (English / Bahasa Melayu) in Chrome, Edge and Safari
@@ -124,6 +125,7 @@ warning bar at the top.
 | 1 | Sign up / log in   | `auth.js`                | Continue with Google, or email + password with *Remember me* and reset by email |
 | 2 | Notes list         | `renderList()`           | Pinned first, then newest; tags for *Pinned*, *Photo*, *Scanned*   |
 | 3 | Rich editor        | `#toolbar` (Quill)       | Bold, italic, underline, strike; 6 fonts, sizes, text colour, highlight; align; bullet, numbered and **tick** lists; headings, quote, link, picture |
+| 4a| Code blocks        | `insertCode()`, `openCodeViewer()` | Select text → **</>** marks it as code (language auto-detected, change it in the block); upload a code file (.js .py .java .sql .html …); **Open** shows the block full-screen with line numbers, wrap, copy and download |
 | 4 | Emoji & symbols    | `openPopover()`          | Emoji by category; ticks, arrows, maths, currency (incl. RM) and punctuation |
 | 5 | Handwrite → text   | `openPad("write")`       | Write with finger / mouse, tap **✓** — the word is typed into the note; tap an alternative if it guessed wrong (EN / BM) |
 | 6 | Sketch             | `openPad("draw")`        | Colours, brush sizes, eraser, undo; added to the note as a picture |
@@ -139,7 +141,7 @@ warning bar at the top.
 
 ```
 users/{uid}/profile        name, email, createdAt
-users/{uid}/notes/{id}     title, body (plain text for list + search), pinned, paper, hasImage, ocr, createdAt, updatedAt
+users/{uid}/notes/{id}     title, body (plain text for list + search), pinned, paper, hasImage, ocr, hasCode, createdAt, updatedAt
 users/{uid}/content/{id}   delta  (the formatted note as a Quill Delta, JSON string; sketches embedded)
 users/{uid}/images/{id}    data   (compressed JPEG data URL)
 ```
@@ -279,6 +281,7 @@ sign-in header and the notes list.
 - Auth & database — [Firebase](https://firebase.google.com/) by Google
 - OCR engine — [Tesseract.js](https://tesseract.projectnaptha.com/)
 - Editor — [Quill](https://quilljs.com/)
+- Code colours — [highlight.js](https://highlightjs.org/)
 - Handwriting recognition — Google Input Tools
 - Typefaces — [Inter Tight](https://fonts.google.com/specimen/Inter+Tight),
   [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif),

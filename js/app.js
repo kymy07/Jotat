@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 import {
   EMOJI, SYMBOLS, TEMPLATES, createPad, recognizeInk, prepareForOcr, cleanOcrText, exportNote,
+  CODE_LANGUAGES, langFromFilename, langInfo,
 } from "./tools.js";
 
 const $ = (s) => document.querySelector(s);
@@ -70,6 +71,8 @@ const quill = new Quill("#quill", {
   modules: {
     toolbar: { container: "#toolbar", handlers: { image: () => $("#imageInsertInput").click() } },
     history: { delay: 800, maxStack: 300, userOnly: true },
+    // code blocks get a language dropdown and colours from highlight.js
+    syntax: window.hljs ? { hljs: window.hljs, languages: CODE_LANGUAGES.map(({ key, label }) => ({ key, label })) } : false,
   },
 });
 quill.disable();
@@ -98,7 +101,7 @@ $("#toolbar").addEventListener("scroll", () => {
 
 // The last place the caret was, so pickers and pads insert where the user was writing
 let lastRange = { index: 0, length: 0 };
-quill.on("selection-change", (range) => { if (range) lastRange = range; });
+quill.on("selection-change", (range) => { if (range) lastRange = range; updateCodeUi(); });
 const caret = () => {
   const len = quill.getLength();
   return Math.min(lastRange.index, len - 1);
@@ -121,6 +124,149 @@ function insertImageAtCaret(dataUrl) {
 quill.on("text-change", () => {
   if (loadingContent || !currentId) return;
   scheduleSave();
+  updateCodeUi();
+});
+
+/* ---------------- code blocks ---------------- */
+const codeOpenBtn = $("#codeOpenBtn");
+const openCodeTb = $("#openCodeTb");
+
+// The code block the caret is in: its DOM container, full text and language
+function codeAt(index) {
+  if (index == null) return null;
+  const [line] = quill.getLine(Math.min(index, quill.getLength() - 1));
+  if (!line || line.statics.blotName !== "code-block") return null;
+  const container = line.parent.domNode;
+  const lines = [...container.querySelectorAll(".ql-code-block")];
+  return {
+    container,
+    code: lines.map((l) => l.textContent).join("\n"),
+    lang: lines[0]?.getAttribute("data-language") || "plain",
+  };
+}
+
+function updateCodeUi() {
+  const range = quill.getSelection();
+  const info = range && codeAt(range.index);
+  openCodeTb.disabled = !info;
+  codeOpenBtn.classList.toggle("hidden", !info);
+  if (!info) return;
+  const c = info.container.getBoundingClientRect();
+  const sheet = el.sheet.getBoundingClientRect();
+  codeOpenBtn.style.top = `${c.top - sheet.top + 8}px`;
+  codeOpenBtn.style.right = `${sheet.right - c.right + 10}px`;
+}
+codeOpenBtn.addEventListener("mousedown", (e) => e.preventDefault());
+
+// After "mark as code", guess the language so the colours show straight away
+$("#toolbar").addEventListener("click", (e) => {
+  if (!e.target.closest("button.ql-code-block")) return;
+  const range = quill.getSelection();
+  const info = range && codeAt(range.index);
+  if (!info || info.lang !== "plain" || info.code.trim().length < 8 || !window.hljs) return;
+  const guess = hljs.highlightAuto(info.code, CODE_LANGUAGES.map((l) => l.key).filter((k) => k !== "plain"));
+  if (!guess.language || guess.relevance < 3) return;
+  const { start, end } = codeBlockRange(range.index);
+  quill.formatLine(start, end - start, "code-block", guess.language, "user");
+  toast(`Looks like ${langInfo(guess.language).label} — change it at the top-left of the block`, 3200);
+});
+codeOpenBtn.addEventListener("click", () => openCodeAtCaret());
+
+function openCodeAtCaret() {
+  const range = quill.getSelection() || lastRange;
+  const info = codeAt(range?.index);
+  if (!info) return toast("Put the cursor inside a code block first");
+  openCodeViewer(info.code, info.lang);
+}
+
+// Index range [start, end) of the whole code block that contains `index`
+function codeBlockRange(index) {
+  const [line] = quill.getLine(index);
+  const container = line.parent;
+  const start = quill.getIndex(container);
+  return { start, end: start + container.length() };
+}
+
+// Insert code on its own lines, formatted as a code block, never merged into a neighbouring block
+async function insertCode(code, lang, { select = false } = {}) {
+  await contentReady;
+  let at = caret();
+  if (codeAt(at)) {
+    // step out of the block the caret is in: add two plain lines after it and use the second
+    const { end } = codeBlockRange(at);
+    quill.insertText(end - 1, "\n\n", "user");
+    quill.formatLine(end, 2, "code-block", false, "user");
+    at = end + 1;
+  } else if (at > 0 && quill.getText(at - 1, 1) !== "\n") {
+    quill.insertText(at, "\n", "user");
+    at++;
+  }
+  const text = code.replace(/\r\n?/g, "\n").replace(/\n+$/, "");
+  quill.insertText(at, text + "\n", { "code-block": lang }, "user");
+  // select a placeholder so typing replaces it; otherwise put the caret after the block
+  const range = select ? { index: at, length: text.length } : { index: at + text.length + 1, length: 0 };
+  quill.setSelection(range.index, range.length, "user");
+  lastRange = range;
+  return at;
+}
+
+/* code viewer */
+const codeModal = $("#codeModal");
+let viewing = { code: "", lang: "plain" };
+
+function openCodeViewer(code, lang) {
+  const info = langInfo(lang);
+  viewing = { code, lang };
+  const lines = code.split("\n").length;
+  $("#codeLang").textContent = info.label;
+  $("#codeStats").textContent = `${lines} line${lines === 1 ? "" : "s"} · ${code.length} characters`;
+  const out = $("#codeOut");
+  if (lang !== "plain" && window.hljs?.getLanguage(lang)) {
+    out.innerHTML = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+  } else {
+    out.textContent = code;
+  }
+  $("#codeGutter").textContent = Array.from({ length: lines }, (_, i) => i + 1).join("\n");
+  codeModal.classList.add("show");
+}
+function closeCodeViewer() { codeModal.classList.remove("show"); }
+$("#codeClose").addEventListener("click", closeCodeViewer);
+codeModal.addEventListener("click", (e) => { if (e.target === codeModal) closeCodeViewer(); });
+$("#codeWrap").addEventListener("click", () => {
+  const on = $("#codeView").classList.toggle("is-wrap");
+  $("#codeWrap").setAttribute("aria-pressed", String(on));
+});
+$("#codeCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(viewing.code); toast("Code copied"); }
+  catch { toast("Copy not allowed by this browser"); }
+});
+$("#codeDownload").addEventListener("click", () => {
+  const base = (el.title.value || "code").replace(/[\\/:*?"<>|]+/g, "").trim().slice(0, 60) || "code";
+  const name = /\.[a-z0-9]+$/i.test(base) ? base : `${base}.${langInfo(viewing.lang).ext}`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([viewing.code], { type: "text/plain;charset=utf-8" }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`Downloaded ${name}`);
+});
+
+/* upload a code file */
+let codeFileTarget = "current";
+$("#codeFileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (file.size > 300 * 1024) return toast("That file is over 300 KB — too big for a note");
+  try {
+    const text = await readFile(file, "text");
+    const lang = langFromFilename(file.name);
+    if (codeFileTarget === "new" || !currentId) createNote({ title: file.name });
+    await insertCode(text, lang);
+    toast(`Added ${file.name} as ${langInfo(lang).label}`);
+  } catch {
+    toast("Could not read that file");
+  }
 });
 
 /* ---------------- helpers ---------------- */
@@ -260,6 +406,7 @@ function renderList() {
     if (n.pinned) meta.append(tag("Pinned"));
     if (n.hasImage) meta.append(tag("Photo"));
     if (n.ocr) meta.append(tag("Scanned"));
+    if (n.hasCode) meta.append(tag("Code"));
 
     btn.append(top, snip);
     if (meta.children.length) btn.append(meta);
@@ -354,6 +501,7 @@ async function loadContent(id, n) {
       loadingContent = false;
       quill.enable();
       quill.history.clear();
+      quill.getModule("syntax")?.highlight(null, true);
       renderMeta();
     }
   }
@@ -364,6 +512,7 @@ function closeNote() {
   currentId = null;
   currentImage = null;
   closePopover();
+  codeOpenBtn.classList.add("hidden");
   quill.disable();
   el.empty.classList.remove("hidden");
   el.app.classList.remove("show-editor");
@@ -403,13 +552,16 @@ function saveNow() {
   if (!id || !notes[id] || loadingContent) return;
   const title = el.title.value;
   const body = plainText().slice(0, 20000);
-  Object.assign(notes[id], { title, body });
+  const ops = quill.getContents().ops;
+  const hasCode = ops.some((op) => op.attributes?.["code-block"]);
+  Object.assign(notes[id], { title, body, hasCode });
   // one atomic write: list metadata + the rich content stored separately
   update(ref(db, userPath()), {
     [`notes/${id}/title`]: title,
     [`notes/${id}/body`]: body,
+    [`notes/${id}/hasCode`]: hasCode,
     [`notes/${id}/updatedAt`]: serverTimestamp(),
-    [`content/${id}`]: { delta: JSON.stringify(quill.getContents().ops) },
+    [`content/${id}`]: { delta: JSON.stringify(ops) },
   })
     .then(() => { if (currentId === id) setStatus("Saved"); })
     .catch((err) => { setStatus("Not saved"); toast("Save failed — " + err.message); });
@@ -489,7 +641,7 @@ exportMenu.addEventListener("click", async (e) => {
   exportMenu.classList.add("hidden");
   const payload = {
     title: el.title.value,
-    html: quill.root.innerHTML,
+    html: exportHtml(),
     text: plainText(),
     date: formatDate(notes[currentId]?.updatedAt),
   };
@@ -505,6 +657,12 @@ exportMenu.addEventListener("click", async (e) => {
     toast(err.message || "Export failed");
   }
 });
+
+function exportHtml() {
+  const copy = quill.root.cloneNode(true);
+  copy.querySelectorAll(".ql-ui").forEach((n) => n.remove());
+  return copy.innerHTML;
+}
 
 /* ---------------- toolbar extras ---------------- */
 const popover = $("#popover");
@@ -573,6 +731,8 @@ $("#toolbar").addEventListener("click", (e) => {
   if (cmd === "handwrite") openPad("write");
   if (cmd === "draw") openPad("draw");
   if (cmd === "voice") openVoice();
+  if (cmd === "codefile") { codeFileTarget = "current"; $("#codeFileInput").click(); }
+  if (cmd === "opencode") openCodeAtCaret();
 });
 
 $("#imageInsertInput").addEventListener("change", async (e) => {
@@ -609,6 +769,13 @@ $("#featuresPane").addEventListener("click", async (e) => {
     case "voice": ensureNote("Voice note"); openVoice(); break;
     case "checklist": createNote({ title: TEMPLATES.checklist.title }, TEMPLATES.checklist.html()); break;
     case "import": $("#importInput").click(); break;
+    case "code": {
+      ensureNote("Code snippet");
+      await insertCode("// write or paste your code here", "javascript", { select: true });
+      toast("Code block added — pick the language at its top-left");
+      break;
+    }
+    case "codefile": codeFileTarget = "new"; $("#codeFileInput").click(); break;
   }
 });
 
@@ -833,6 +1000,7 @@ $("#voiceInsert").addEventListener("click", () => {
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (padModal.classList.contains("show")) closePad();
+  if (codeModal.classList.contains("show")) closeCodeViewer();
   if (voiceModal.classList.contains("show")) closeVoice();
 });
 

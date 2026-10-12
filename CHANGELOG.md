@@ -2,7 +2,19 @@
 
 All notable changes to Jotat. Versions follow [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
 
-## [1.1.0] — 2026-10-13
+## [1.2.0] — 2026-10-13
+
+### Added
+- **Code blocks**: select text and tap **</>** to mark it as code — the language is detected automatically and can be
+  changed from the dropdown in the block (JavaScript, TypeScript, Python, Java, C/C++, C#, PHP, Go, Rust, SQL,
+  HTML, CSS, JSON, Bash, YAML and more), with syntax colours. Inline code too.
+- **Upload a code file** (.js, .py, .java, .sql, .html, .css, .json, … up to 300 KB) into a note; the language comes
+  from the file extension. Also in the Features tab: *Code snippet* and *Code file*.
+- **Open code**: with the cursor in a code block, tap **Open** to view it full-screen with line numbers, word wrap,
+  copy and download (saved with the right file extension).
+- Notes that contain code are tagged **Code** in the list.
+
+ — 2026-10-13
 
 ### Added
 - **Rich editor** (Quill): bold, italic, underline, strikethrough; six fonts (Sans, Serif, Elegant, Display,

@@ -10,10 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@500;700&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/editor.css">
   <script src="js/version.js"></script>
   <script src="js/motion.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 </head>
@@ -37,7 +39,7 @@
       <div class="sidebar__head">
         <div class="sidebar__title">
           <h1 id="paneTitle">Notes</h1>
-          <span class="mono-label"><span id="noteCount">0 notes</span> · <span data-version>v1.1.0</span></span>
+          <span class="mono-label"><span id="noteCount">0 notes</span> · <span data-version>v1.2.0</span></span>
         </div>
         <div class="tabs tabs--sm" role="tablist" aria-label="Sidebar">
           <button role="tab" id="tabNotes" aria-selected="true" aria-controls="notesPane">Notes</button>
@@ -96,6 +98,14 @@
             <button class="tool" data-tool="checklist">
               <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="M4.5 7l1 1 2-2M12 7h9M12 17h9"/><rect x="3" y="14" width="6" height="6" rx="1.5"/></svg></span>
               <b>Checklist</b><small>To-dos you can tick</small>
+            </button>
+            <button class="tool" data-tool="code">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg></span>
+              <b>Code snippet</b><small>Code block with colours</small>
+            </button>
+            <button class="tool" data-tool="codefile">
+              <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M10 12l-2 2 2 2M14 12l2 2-2 2"/></svg></span>
+              <b>Code file</b><small>Upload .js .py .sql .html…</small>
             </button>
             <button class="tool" data-tool="import">
               <span class="tool__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg></span>
@@ -225,6 +235,12 @@
           <button class="ql-indent" value="+1" title="Indent"></button>
         </span>
         <span class="ql-formats">
+          <button class="ql-code-block" title="Mark as code block (select text first)"></button>
+          <button class="ql-code" title="Inline code"></button>
+          <button type="button" class="tb-btn" data-cmd="codefile" title="Upload a code file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M10 12l-2 2 2 2M14 12l2 2-2 2"/></svg></button>
+          <button type="button" class="tb-btn" data-cmd="opencode" id="openCodeTb" title="Open code block (put the cursor inside one)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 4h6v6M20 4l-8 8M10 5H5v14h14v-5"/></svg></button>
+        </span>
+        <span class="ql-formats">
           <button class="ql-blockquote" title="Quote"></button>
           <button class="ql-link" title="Link"></button>
           <button class="ql-image" title="Insert picture"></button>
@@ -267,6 +283,10 @@
           </div>
 
           <div id="quill" class="note-body"></div>
+          <button class="code-open hidden" id="codeOpenBtn" type="button" title="Open this code">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4h6v6M20 4l-8 8M10 5H5v14h14v-5"/></svg>
+            Open
+          </button>
         </article>
       </div>
 
@@ -388,6 +408,31 @@
     </div>
   </div>
 
+  <!-- CODE VIEWER -->
+  <div class="sheet-modal" id="codeModal" role="dialog" aria-modal="true" aria-labelledby="codeLang">
+    <div class="sheet-modal__card code-card">
+      <div class="sheet-modal__head">
+        <div class="code-head">
+          <span class="code-badge" id="codeLang">Code</span>
+          <span class="mono-label" id="codeStats"></span>
+        </div>
+        <div class="code-actions">
+          <button class="pill pill--glass pill--sm" id="codeWrap" aria-pressed="false">Wrap</button>
+          <button class="pill pill--glass pill--sm" id="codeCopy">Copy</button>
+          <button class="pill pill--dark pill--sm" id="codeDownload">Download</button>
+          <button class="icon-btn" id="codeClose" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="code-view" id="codeView">
+        <pre class="code-gutter" id="codeGutter" aria-hidden="true"></pre>
+        <pre class="code-pre"><code class="hljs" id="codeOut"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="codeFileInput" accept=".js,.mjs,.cjs,.jsx,.ts,.tsx,.py,.java,.c,.h,.cpp,.cc,.hpp,.cs,.php,.rb,.go,.rs,.kt,.swift,.sql,.html,.htm,.xml,.svg,.css,.scss,.less,.json,.sh,.bash,.zsh,.yml,.yaml,.md,.lua,.r,.vb,.graphql,.ini,.txt" hidden>
   <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
   <input type="file" id="fileInputGallery" accept="image/*" hidden>
   <input type="file" id="imageInsertInput" accept="image/*" hidden>

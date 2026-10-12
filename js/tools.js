@@ -18,6 +18,48 @@ export const SYMBOLS = {
   "Punctuation": "“ ” ‘ ’ « » — – … · ¿ ¡ ‹ ›",
 };
 
+/* ---------------- code ---------------- */
+// Languages offered in a code block's dropdown (keys are highlight.js names; "plain" = no colours)
+export const CODE_LANGUAGES = [
+  { key: "plain", label: "Plain text", ext: "txt" },
+  { key: "javascript", label: "JavaScript", ext: "js" },
+  { key: "typescript", label: "TypeScript", ext: "ts" },
+  { key: "python", label: "Python", ext: "py" },
+  { key: "java", label: "Java", ext: "java" },
+  { key: "c", label: "C", ext: "c" },
+  { key: "cpp", label: "C++", ext: "cpp" },
+  { key: "csharp", label: "C#", ext: "cs" },
+  { key: "php", label: "PHP", ext: "php" },
+  { key: "ruby", label: "Ruby", ext: "rb" },
+  { key: "go", label: "Go", ext: "go" },
+  { key: "rust", label: "Rust", ext: "rs" },
+  { key: "kotlin", label: "Kotlin", ext: "kt" },
+  { key: "swift", label: "Swift", ext: "swift" },
+  { key: "sql", label: "SQL", ext: "sql" },
+  { key: "xml", label: "HTML / XML", ext: "html" },
+  { key: "css", label: "CSS", ext: "css" },
+  { key: "json", label: "JSON", ext: "json" },
+  { key: "bash", label: "Bash / Shell", ext: "sh" },
+  { key: "yaml", label: "YAML", ext: "yml" },
+  { key: "markdown", label: "Markdown", ext: "md" },
+  { key: "lua", label: "Lua", ext: "lua" },
+  { key: "r", label: "R", ext: "r" },
+];
+
+const EXT_TO_LANG = {
+  js: "javascript", mjs: "javascript", cjs: "javascript", jsx: "javascript",
+  ts: "typescript", tsx: "typescript", py: "python", java: "java",
+  c: "c", h: "c", cpp: "cpp", cc: "cpp", hpp: "cpp", cs: "csharp",
+  php: "php", rb: "ruby", go: "go", rs: "rust", kt: "kotlin", swift: "swift",
+  sql: "sql", html: "xml", htm: "xml", xml: "xml", svg: "xml",
+  css: "css", scss: "css", less: "css", json: "json",
+  sh: "bash", bash: "bash", zsh: "bash", yml: "yaml", yaml: "yaml",
+  md: "markdown", lua: "lua", r: "r", vb: "plain", graphql: "plain", ini: "plain", txt: "plain",
+};
+
+export const langFromFilename = (name) => EXT_TO_LANG[(name.split(".").pop() || "").toLowerCase()] || "plain";
+export const langInfo = (key) => CODE_LANGUAGES.find((l) => l.key === key) || CODE_LANGUAGES[0];
+
 /* ---------------- templates ---------------- */
 const today = () => new Date().toLocaleDateString("en-MY", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
@@ -317,6 +359,12 @@ const EXPORT_CSS = `
   .ql-font-serif { font-family: Lora, Georgia, serif; } .ql-font-elegant { font-family: "Playfair Display", Georgia, serif; }
   .ql-font-display { font-family: "Instrument Serif", Georgia, serif; } .ql-font-hand { font-family: Caveat, cursive; font-size: 1.3em; }
   .ql-font-mono { font-family: "JetBrains Mono", Consolas, monospace; }
+  .ql-code-block-container, pre { background: #22272e; color: #e6e6e0; font-family: "JetBrains Mono", Consolas, monospace; font-size: 10pt; line-height: 1.55; padding: 12px 14px; border-radius: 8px; white-space: pre-wrap; }
+  .ql-code-block-container .ql-ui { display: none; }
+  code { font-family: "JetBrains Mono", Consolas, monospace; background: #ececE4; padding: 1px 5px; border-radius: 4px; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #f47067; } .hljs-string, .hljs-attr { color: #96d0ff; }
+  .hljs-comment { color: #768390; font-style: italic; } .hljs-number, .hljs-literal { color: #6cb6ff; }
+  .hljs-title, .hljs-function { color: #dcbdfb; } .hljs-name, .hljs-tag { color: #8ddb8c; }
   .ql-align-center { text-align: center; } .ql-align-right { text-align: right; } .ql-align-justify { text-align: justify; }`;
 
 export function exportNote(kind, { title, html, text, date }) {
